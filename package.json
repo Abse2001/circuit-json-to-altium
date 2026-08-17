@@ -1,0 +1,43 @@
+{
+  "name": "circuit-json-to-altium",
+  "version": "0.0.1",
+  "description": "Convert Circuit JSON schematic and PCB content into native Altium Designer project documents",
+  "module": "lib/index.ts",
+  "types": "lib/index.ts",
+  "type": "module",
+  "files": ["lib"],
+  "scripts": {
+    "check": "bun run format:check && bun run typecheck && bun test",
+    "format": "biome check --write .",
+    "format:check": "biome check .",
+    "test": "bun test",
+    "typecheck": "bunx tsc --noEmit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tscircuit/circuit-json-to-altium.git"
+  },
+  "keywords": [
+    "circuit-json",
+    "altium",
+    "pcb",
+    "schematic",
+    "eda",
+    "tscircuit"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "altiumts": "0.0.17",
+    "circuit-json": "^0.0.469",
+    "jszip": "^3.10.1",
+    "transformation-matrix": "^3.1.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.8",
+    "@types/bun": "latest",
+    "bun-match-svg": "^0.0.16",
+    "circuit-to-svg": "^0.0.403",
+    "tscircuit": "^0.0.2352",
+    "typescript": "^5.9.3"
+  }
+}
