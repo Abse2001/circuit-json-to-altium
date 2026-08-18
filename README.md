@@ -72,13 +72,13 @@ Five round-trip tests download SHA-256-pinned, open-source Altium boards from
 GitHub. Each board is parsed into Circuit JSON by the test-only, independent
 `altium-toolkit` implementation, converted back to a native `.PcbDoc`, and
 independently parsed again. The tests require exact primitive and rotation
-counts, sub-0.03 mm relative geometry drift, and a side-by-side SVG snapshot of
-the original and generated boards. CI downloads the references before running
-the suite; the licensed native files themselves are not committed.
+counts and sub-0.03 mm relative geometry drift. Each test stores the source and
+generated renderer output as separate SVG snapshots. CI downloads the references
+before running the suite; the licensed native files themselves are not committed.
 
-PCB and schematic tests also render Circuit JSON and the converted Altium
-document side by side. Visual baselines live in `tests/__snapshots__` so mapping
-regressions can be reviewed directly in a pull request.
+PCB and schematic tests likewise snapshot the raw Circuit JSON and converted
+Altium SVG outputs separately. Visual baselines live in `tests/__snapshots__` so
+mapping regressions can be reviewed directly in a pull request.
 
 ```bash
 # Update visual snapshots after reviewing an intentional rendering change
@@ -97,8 +97,8 @@ lib/
 ├── create-pcb-document.ts               # Circuit JSON PCB mapping
 └── create-schematic-document.ts         # Circuit JSON schematic mapping
 tests/
-├── fixtures/                            # Shared visual and archive helpers
-└── __snapshots__/                       # Side-by-side visual baselines
+├── fixtures/                            # Shared round-trip and archive helpers
+└── __snapshots__/                       # Raw renderer baselines
 references/                               # Pinned open-source board manifest
 scripts/                                  # Verified reference downloader
 ```

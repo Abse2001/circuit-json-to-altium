@@ -1,8 +1,8 @@
 import { resolve } from "node:path"
-import { Parser, PcbSvgRenderer } from "altium-toolkit"
+import { Parser } from "altium-toolkit"
+import { parseAltiumBinaryPcbDoc, serializeAltiumPcbToSvg } from "altiumts"
 import { CircuitJsonToAltiumConverter } from "../../lib"
 import type { CircuitElement } from "../../lib/types"
-import { createAltiumRoundTripComparisonSvg } from "./create-altium-round-trip-comparison-svg"
 import { getPcbRoundTripMetrics } from "./get-pcb-round-trip-metrics"
 
 type IndependentAltiumDocument = Record<string, unknown> & {
@@ -12,7 +12,8 @@ type IndependentAltiumDocument = Record<string, unknown> & {
 export type OpenSourceBoardRoundTrip = ReturnType<
   typeof getPcbRoundTripMetrics
 > & {
-  comparisonSvg: string
+  roundTripSvg: string
+  sourceSvg: string
 }
 
 type OpenSourceBoardRoundTripOptions = {
@@ -30,6 +31,10 @@ async function parsePcbDoc(
   )) as IndependentAltiumDocument
 }
 
+function renderPcbDoc(pcbDocBytes: Uint8Array): string {
+  return serializeAltiumPcbToSvg(parseAltiumBinaryPcbDoc(pcbDocBytes))
+}
+
 export async function createOpenSourceBoardRoundTrip({
   boardName,
   filename,
@@ -41,18 +46,17 @@ export async function createOpenSourceBoardRoundTrip({
     "references",
     filename,
   )
-  const sourceDocument = await parsePcbDoc(
-    filename,
-    await Bun.file(sourcePath).arrayBuffer(),
-  )
+  const sourceBytes = new Uint8Array(await Bun.file(sourcePath).arrayBuffer())
+  const sourceDocument = await parsePcbDoc(filename, sourceBytes.buffer)
   const converter = new CircuitJsonToAltiumConverter(sourceDocument.model, {
     projectName: boardName,
   })
   converter.runUntilFinished()
   const generatedPcb = converter.getOutput().pcb
+  const generatedBytes = Uint8Array.from(generatedPcb.content)
   const generatedDocument = await parsePcbDoc(
     generatedPcb.filename,
-    Uint8Array.from(generatedPcb.content).buffer,
+    generatedBytes.buffer,
   )
   const metrics = getPcbRoundTripMetrics({
     roundTripCircuitJson: generatedDocument.model,
@@ -61,11 +65,7 @@ export async function createOpenSourceBoardRoundTrip({
 
   return {
     ...metrics,
-    comparisonSvg: createAltiumRoundTripComparisonSvg({
-      boardName,
-      generatedAltiumSvg: PcbSvgRenderer.render(generatedDocument),
-      originalAltiumSvg: PcbSvgRenderer.render(sourceDocument),
-      primitiveCounts: metrics.sourceCounts,
-    }),
+    roundTripSvg: renderPcbDoc(generatedBytes),
+    sourceSvg: renderPcbDoc(sourceBytes),
   }
 }

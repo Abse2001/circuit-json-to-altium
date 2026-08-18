@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1000" height="688" viewBox="0 0 505.5118 348.0315" role="img" aria-label="Altium PCB" class="altium-pcb" data-renderer="altiumts">
+  <title>Altium PCB</title>
+  <rect width="100%" height="100%" fill="#071a16"/>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <polygon data-record="BoardOutline" points="16.5354,16.5354 488.9763,16.5354 488.9763,331.496 16.5354,331.496 16.5354,16.5354" fill="#123d32" stroke="#6ee7b7" stroke-width="3"/>
+    <line data-record="Track" data-layer="TOP" x1="299.0157" y1="174.0157" x2="194.0945" y2="174.0157" stroke="#ef4444" stroke-width="5.9055"/>
+    <line data-record="Track" data-layer="TOPOVERLAY" x1="167.9669" y1="188.9763" x2="180.0646" y2="188.9763" stroke="#f8fafc" stroke-width="4.7244"/>
+    <line data-record="Track" data-layer="TOPOVERLAY" x1="167.9669" y1="159.0551" x2="180.0646" y2="159.0551" stroke="#f8fafc" stroke-width="4.7244"/>
+    <line data-record="Track" data-layer="TOPOVERLAY" x1="363.9763" y1="208.4645" x2="275.3937" y2="208.4645" stroke="#f8fafc" stroke-width="3.937"/>
+    <line data-record="Track" data-layer="TOPOVERLAY" x1="275.3937" y1="208.4645" x2="275.3937" y2="139.5669" stroke="#f8fafc" stroke-width="3.937"/>
+    <line data-record="Track" data-layer="TOPOVERLAY" x1="275.3937" y1="139.5669" x2="363.9763" y2="139.5669" stroke="#f8fafc" stroke-width="3.937"/>
+    <g data-record="Pad" data-layer="TOP" data-pad-name="1" data-pad-shape="RECTANGLE" data-pad-stack-layer="0" data-pad-stack-mode="SIMPLE" data-plated="true"><rect x="143.3071" y="161.4173" width="21.2598" height="25.1969" fill="#ef4444" stroke="#111827" stroke-width="1"/></g>
+    <g data-record="Pad" data-layer="TOP" data-pad-name="2" data-pad-shape="RECTANGLE" data-pad-stack-layer="0" data-pad-stack-mode="SIMPLE" data-plated="true"><rect x="183.4646" y="161.4173" width="21.2598" height="25.1969" fill="#ef4444" stroke="#111827" stroke-width="1"/></g>
+    <g data-record="Pad" data-layer="TOP" data-pad-name="1" data-pad-shape="RECTANGLE" data-pad-stack-layer="0" data-pad-stack-mode="SIMPLE" data-plated="true"><rect x="283.2677" y="155.3149" width="31.4961" height="37.4016" fill="#ef4444" stroke="#111827" stroke-width="1"/></g>
+    <g data-record="Pad" data-layer="TOP" data-pad-name="2" data-pad-shape="RECTANGLE" data-pad-stack-layer="0" data-pad-stack-mode="SIMPLE" data-plated="true"><rect x="348.2283" y="155.3149" width="31.4961" height="37.4016" fill="#ef4444" stroke="#111827" stroke-width="1"/></g>
+    <text data-record="Text" data-layer="TOPOVERLAY" x="0" y="0" fill="#f8fafc" font-family="Arial, sans-serif" font-size="15.748" font-weight="normal" font-style="normal" dominant-baseline="central" transform="translate(174.0157 222.0472) rotate(0) scale(1 1)">R1</text>
+    <text data-record="Text" data-layer="TOPOVERLAY" x="0" y="0" fill="#f8fafc" font-family="Arial, sans-serif" font-size="15.748" font-weight="normal" font-style="normal" dominant-baseline="central" transform="translate(331.496 228.1495) rotate(0) scale(1 1)">C1</text>
+  </g>
+</svg>

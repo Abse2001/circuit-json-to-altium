@@ -11,5 +11,9 @@ test("round-trips the open-source EBAZ4205 Altium board", async () => {
   expect(result.geometryMaxDeltaMm).toBeLessThan(0.03)
   expect(result.rotationMismatchCount).toBe(0)
   expect(result.sourcePrimitiveTotal).toBeGreaterThan(5_000)
-  await expect(result.comparisonSvg).toMatchSvgSnapshot(import.meta.path)
+  await expect(result.sourceSvg).toMatchSvgSnapshot(import.meta.path, "source")
+  await expect(result.roundTripSvg).toMatchSvgSnapshot(
+    import.meta.path,
+    "round-trip",
+  )
 })
