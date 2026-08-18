@@ -62,10 +62,19 @@ The current converter handles board outlines, components, pads, plated and non-p
 
 ```bash
 bun install
+bun run download-open-source-boards
 bun run check
 ```
 
 Tests follow the tscircuit convention of one test case per test file. The suite covers archive structure, filename sanitization, PCB geometry and connectivity, schematic primitives and sheets, randomized inputs, and native binary round trips.
+
+Five round-trip tests download SHA-256-pinned, open-source Altium boards from
+GitHub. Each board is parsed into Circuit JSON by the test-only, independent
+`altium-toolkit` implementation, converted back to a native `.PcbDoc`, and
+independently parsed again. The tests require exact primitive and rotation
+counts, sub-0.03 mm relative geometry drift, and a side-by-side SVG snapshot of
+the original and generated boards. CI downloads the references before running
+the suite; the licensed native files themselves are not committed.
 
 PCB and schematic tests also render Circuit JSON and the converted Altium
 document side by side. Visual baselines live in `tests/__snapshots__` so mapping
@@ -75,6 +84,7 @@ regressions can be reviewed directly in a pull request.
 # Update visual snapshots after reviewing an intentional rendering change
 BUN_UPDATE_SNAPSHOTS=1 bun test tests/visual01-pcb-comparison.test.tsx
 BUN_UPDATE_SNAPSHOTS=1 bun test tests/visual02-schematic-comparison.test.tsx
+BUN_UPDATE_SNAPSHOTS=1 bun test tests/roundtrip*.test.ts
 ```
 
 ## Project structure
@@ -89,4 +99,6 @@ lib/
 tests/
 ├── fixtures/                            # Shared visual and archive helpers
 └── __snapshots__/                       # Side-by-side visual baselines
+references/                               # Pinned open-source board manifest
+scripts/                                  # Verified reference downloader
 ```
