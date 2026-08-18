@@ -23,7 +23,8 @@ The downloader verifies a pinned SHA-256 digest before writing each file. The
 downloaded native documents are ignored by git; only their generated SVG
 round-trip snapshots are committed.
 
-Each test uses the independent `altium-toolkit` implementation to parse the
-source board into Circuit JSON, runs that Circuit JSON through this converter,
-parses the generated `.PcbDoc` independently, checks important primitive
-counts, and snapshots the original and round-tripped board side by side.
+Each test uses `altiumts` to parse the source board, projects the supported PCB
+primitives into Circuit JSON, runs that Circuit JSON through this converter,
+then uses `altiumts` to parse and render the generated `.PcbDoc`. The tests
+check important primitive counts and snapshot the original and round-tripped
+board side by side.
