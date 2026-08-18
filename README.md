@@ -72,9 +72,10 @@ Five round-trip tests download SHA-256-pinned, open-source Altium boards from
 GitHub. Each board is parsed into Circuit JSON by the test-only, independent
 `altium-toolkit` implementation, converted back to a native `.PcbDoc`, and
 independently parsed again. The tests require exact primitive and rotation
-counts and sub-0.03 mm relative geometry drift. Each test stores the source and
-generated renderer output as separate SVG snapshots. CI downloads the references
-before running the suite; the licensed native files themselves are not committed.
+counts and sub-0.03 mm relative geometry drift. Each test embeds the unchanged
+source and generated SVGs side by side in one snapshot. CI downloads the
+references before running the suite; the licensed native files themselves are
+not committed.
 
 PCB and schematic tests likewise snapshot the raw Circuit JSON and converted
 Altium SVG outputs separately. Visual baselines live in `tests/__snapshots__` so
