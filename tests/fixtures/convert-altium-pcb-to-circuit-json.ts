@@ -1,6 +1,6 @@
 import {
-  type AltiumBinaryPcbDoc,
   type AltiumComponentRecord,
+  type AltiumPcbDocument,
   type AltiumPoint,
   type AltiumRecord,
   normalizeAltiumAngle,
@@ -117,7 +117,7 @@ function getText(record: AltiumRecord): string {
 }
 
 function getComponentIds(
-  document: AltiumBinaryPcbDoc,
+  document: AltiumPcbDocument,
 ): Map<AltiumComponentRecord, string> {
   return new Map(
     document.components.map((component, index) => [
@@ -128,7 +128,7 @@ function getComponentIds(
 }
 
 function getOwnedComponentId(
-  document: AltiumBinaryPcbDoc,
+  document: AltiumPcbDocument,
   componentIds: Map<AltiumComponentRecord, string>,
   record: AltiumRecord,
 ): string | undefined {
@@ -137,7 +137,7 @@ function getOwnedComponentId(
 }
 
 function isVisibleComponentText(
-  document: AltiumBinaryPcbDoc,
+  document: AltiumPcbDocument,
   text: AltiumRecord,
 ): boolean {
   const component = document.getComponentForRecord(text)
@@ -195,7 +195,7 @@ function appendCopperTrace(
 }
 
 export function convertAltiumPcbToCircuitJson(
-  document: AltiumBinaryPcbDoc,
+  document: AltiumPcbDocument,
 ): CircuitElement[] {
   const elements: CircuitElement[] = []
   const outline = document.boardGeometry.outline.points.map(toCircuitPoint)
@@ -246,7 +246,7 @@ export function convertAltiumPcbToCircuitJson(
     )
   }
 
-  for (const [padIndex, pad] of document.pads.entries()) {
+  for (const [padIndex, pad] of document.getRecordsByKind("Pad").entries()) {
     const position = getPoint(pad, "X", "Y")
     if (!position) continue
 
@@ -350,7 +350,9 @@ export function convertAltiumPcbToCircuitJson(
     }
   }
 
-  for (const [trackIndex, track] of document.tracks.entries()) {
+  for (const [trackIndex, track] of document
+    .getRecordsByKind("Track")
+    .entries()) {
     const start = getPoint(track, "X1", "Y1")
     const end = getPoint(track, "X2", "Y2")
     const layer = track.getDecoded("LAYER")
@@ -379,7 +381,7 @@ export function convertAltiumPcbToCircuitJson(
     }
   }
 
-  for (const [arcIndex, arc] of document.arcs.entries()) {
+  for (const [arcIndex, arc] of document.getRecordsByKind("Arc").entries()) {
     const points = createArcPoints(arc)
     const layer = arc.getDecoded("LAYER")
     const widthMils = getMeasurementMils(arc, "WIDTH") ?? 4
@@ -411,7 +413,7 @@ export function convertAltiumPcbToCircuitJson(
     }
   }
 
-  for (const [viaIndex, via] of document.vias.entries()) {
+  for (const [viaIndex, via] of document.getRecordsByKind("Via").entries()) {
     const position = getPoint(via, "X", "Y")
     if (!position) continue
     const sourceNetId = getSourceNetId(via)
@@ -431,7 +433,7 @@ export function convertAltiumPcbToCircuitJson(
     })
   }
 
-  for (const [textIndex, text] of document.texts.entries()) {
+  for (const [textIndex, text] of document.getRecordsByKind("Text").entries()) {
     const layer = text.getDecoded("LAYER")
     const position = getPoint(text, "X", "Y")
     if (

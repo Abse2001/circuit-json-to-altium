@@ -7,7 +7,6 @@ bun.lock
 out
 dist
 *.tgz
-/references/*.PcbDoc
 
 # code coverage
 coverage
