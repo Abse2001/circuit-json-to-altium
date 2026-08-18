@@ -3,9 +3,9 @@ import { parseAltiumSchDoc, serializeAltiumSheetToSvg } from "altiumts"
 import { convertCircuitJsonToSchematicSvg } from "circuit-to-svg"
 import { Circuit } from "tscircuit"
 import { CircuitJsonToAltiumConverter } from "../lib"
-import { createCircuitJsonAltiumComparisonSvg } from "./fixtures/create-circuit-json-altium-comparison-svg"
+import { createSideBySideSvg } from "./fixtures/create-side-by-side-svg"
 
-test("shows the Circuit JSON and Altium schematic side by side", async () => {
+test("snapshots the Circuit JSON and generated Altium schematic", async () => {
   const circuit = new Circuit()
   circuit.add(
     <board width="12mm" height="8mm">
@@ -29,11 +29,10 @@ test("shows the Circuit JSON and Altium schematic side by side", async () => {
   const firstSchematic = converter.getOutput().schematics[0]
   if (!firstSchematic) throw new Error("Converter did not create a schematic")
   const altiumSchematic = parseAltiumSchDoc(firstSchematic.content)
-  const comparisonSvg = createCircuitJsonAltiumComparisonSvg({
-    altiumLabel: "Altium Schematic",
-    altiumSvg: serializeAltiumSheetToSvg(altiumSchematic),
-    circuitJsonSvg: await convertCircuitJsonToSchematicSvg(circuitJson),
-  })
+  const circuitJsonSvg = await convertCircuitJsonToSchematicSvg(circuitJson)
+  const altiumSvg = serializeAltiumSheetToSvg(altiumSchematic)
 
-  await expect(comparisonSvg).toMatchSvgSnapshot(import.meta.path)
+  await expect(
+    createSideBySideSvg(circuitJsonSvg, altiumSvg),
+  ).toMatchSvgSnapshot(import.meta.path)
 })

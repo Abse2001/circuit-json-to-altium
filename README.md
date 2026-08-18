@@ -67,14 +67,23 @@ bun run check
 
 Tests follow the tscircuit convention of one test case per test file. The suite covers archive structure, filename sanitization, PCB geometry and connectivity, schematic primitives and sheets, randomized inputs, and native binary round trips.
 
-PCB and schematic tests also render Circuit JSON and the converted Altium
-document side by side. Visual baselines live in `tests/__snapshots__` so mapping
+Five round-trip tests use SHA-256-pinned, permissively licensed Altium boards
+vendored from immutable GitHub revisions. `altiumts` parses each native board,
+a narrow test fixture projects its supported PCB primitives into Circuit JSON,
+and the converter writes a new native `.PcbDoc` that `altiumts` parses and
+renders again. The tests require exact primitive and rotation counts and
+sub-0.03 mm relative geometry drift. The corpus covers binary CFB and ASCII
+Altium PCB documents without GPL or reciprocal/copyleft fixtures.
+
+Every visual comparison embeds the unchanged source and generated SVGs side by
+side in one snapshot. Visual baselines live in `tests/__snapshots__` so mapping
 regressions can be reviewed directly in a pull request.
 
 ```bash
 # Update visual snapshots after reviewing an intentional rendering change
 BUN_UPDATE_SNAPSHOTS=1 bun test tests/visual01-pcb-comparison.test.tsx
 BUN_UPDATE_SNAPSHOTS=1 bun test tests/visual02-schematic-comparison.test.tsx
+BUN_UPDATE_SNAPSHOTS=1 bun test tests/roundtrip*.test.ts
 ```
 
 ## Project structure
@@ -87,6 +96,8 @@ lib/
 ├── create-pcb-document.ts               # Circuit JSON PCB mapping
 └── create-schematic-document.ts         # Circuit JSON schematic mapping
 tests/
-├── fixtures/                            # Shared visual and archive helpers
-└── __snapshots__/                       # Side-by-side visual baselines
+├── fixtures/                            # Shared round-trip and archive helpers
+└── __snapshots__/                       # Raw renderer baselines
+references/                               # Vendored boards, licenses, provenance
+scripts/                                  # Vendored-board integrity verifier
 ```

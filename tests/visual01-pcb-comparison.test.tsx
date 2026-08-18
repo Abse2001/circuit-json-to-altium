@@ -3,9 +3,9 @@ import { parseAltiumBinaryPcbDoc, serializeAltiumPcbToSvg } from "altiumts"
 import { convertCircuitJsonToPcbSvg } from "circuit-to-svg"
 import { Circuit } from "tscircuit"
 import { CircuitJsonToAltiumConverter } from "../lib"
-import { createCircuitJsonAltiumComparisonSvg } from "./fixtures/create-circuit-json-altium-comparison-svg"
+import { createSideBySideSvg } from "./fixtures/create-side-by-side-svg"
 
-test("shows the Circuit JSON and Altium PCB side by side", async () => {
+test("snapshots the Circuit JSON and generated Altium PCB", async () => {
   const circuit = new Circuit()
   circuit.add(
     <board width="12mm" height="8mm">
@@ -27,13 +27,12 @@ test("shows the Circuit JSON and Altium PCB side by side", async () => {
   })
   converter.runUntilFinished()
   const altiumPcb = parseAltiumBinaryPcbDoc(converter.getOutput().pcb.content)
-  const comparisonSvg = createCircuitJsonAltiumComparisonSvg({
-    altiumLabel: "Altium PCB",
-    altiumSvg: serializeAltiumPcbToSvg(altiumPcb),
-    circuitJsonSvg: await convertCircuitJsonToPcbSvg(circuitJson, {
-      showCourtyards: true,
-    }),
+  const circuitJsonSvg = await convertCircuitJsonToPcbSvg(circuitJson, {
+    showCourtyards: true,
   })
+  const altiumSvg = serializeAltiumPcbToSvg(altiumPcb)
 
-  await expect(comparisonSvg).toMatchSvgSnapshot(import.meta.path)
+  await expect(
+    createSideBySideSvg(circuitJsonSvg, altiumSvg),
+  ).toMatchSvgSnapshot(import.meta.path)
 })
