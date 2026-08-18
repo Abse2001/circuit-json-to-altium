@@ -1,5 +1,6 @@
 import { convertCircuitPcbCcwRotationDegreesToAltium } from "./convert-circuit-pcb-ccw-rotation-degrees-to-altium"
 import { createCircuitToAltiumPcbPointTransform } from "./create-circuit-to-altium-pcb-point-transform"
+import { createPcbCopperPourRecords } from "./create-pcb-copper-pour-records"
 import { createPcbNetEntries, type PcbNetEntry } from "./create-pcb-net-entries"
 import {
   asNumber,
@@ -108,6 +109,14 @@ export const createPcbDocument = (circuitJson: CircuitElement[]): string => {
       `|RECORD=Net|ID=${net.index}|NAME=${sanitizeField(net.name)}|VISIBLE=FALSE|JUMPERSVISIBLE=FALSE`,
     )
   }
+
+  lines.push(
+    ...createPcbCopperPourRecords({
+      circuitJson,
+      circuitToAltiumPcbPoint,
+      netEntries,
+    }),
+  )
 
   const pcbComponents = byType(circuitJson, "pcb_component")
   const componentIndex = new Map<PcbComponentId, number>()
