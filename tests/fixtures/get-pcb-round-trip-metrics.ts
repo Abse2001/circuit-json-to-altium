@@ -1,6 +1,7 @@
 import type { CircuitElement } from "../../lib/types"
 
 const preservedPrimitiveTypes = [
+  "source_net",
   "source_component",
   "pcb_component",
   "source_port",
@@ -40,8 +41,19 @@ export type PcbRoundTripMetrics = {
   geometryMaxDeltaMm: number
   rotationMismatchCount: number
   roundTripCounts: PreservedPrimitiveCounts
+  roundTripSourceNetNames: string[]
   sourceCounts: PreservedPrimitiveCounts
+  sourceNetNames: string[]
   sourcePrimitiveTotal: number
+}
+
+function getSourceNetNames(circuitJson: CircuitElement[]): string[] {
+  return circuitJson.flatMap((element) => {
+    if (element.type !== "source_net" || typeof element.name !== "string") {
+      return []
+    }
+    return [element.name]
+  })
 }
 
 function countPreservedPrimitives(
@@ -202,7 +214,9 @@ export function getPcbRoundTripMetrics({
       roundTripCircuitJson,
     ),
     roundTripCounts,
+    roundTripSourceNetNames: getSourceNetNames(roundTripCircuitJson),
     sourceCounts,
+    sourceNetNames: getSourceNetNames(sourceCircuitJson),
     sourcePrimitiveTotal: Object.values(sourceCounts).reduce(
       (sum, count) => sum + count,
       0,
