@@ -35,6 +35,17 @@ type SchematicRecordContext = {
 
 type AltiumSchematicPointKey = string
 
+const ALTIUM_SCHEMATIC_COMPONENT_FONT_SIZE = 4
+const ALTIUM_PIN_STANDARD_FLAGS = 0x20
+const ALTIUM_PIN_NAME_VISIBLE_FLAG = 0x08
+const ALTIUM_PIN_DESIGNATOR_VISIBLE_FLAG = 0x10
+const ALTIUM_PIN_ORIENTATION_BY_FACING_DIRECTION: Record<string, number> = {
+  left: 2,
+  right: 0,
+  up: 1,
+  down: 3,
+}
+
 function doesElementBelongToSchematicSheet({
   element,
   isFirstSchematicSheet,
@@ -87,9 +98,9 @@ export function createSchematicDocument({
     [
       "RECORD=31",
       "FONTIDCOUNT=2",
-      "SIZE1=10",
+      `SIZE1=${ALTIUM_SCHEMATIC_COMPONENT_FONT_SIZE}`,
       "FONTNAME1=Arial",
-      "SIZE2=9",
+      `SIZE2=${ALTIUM_SCHEMATIC_COMPONENT_FONT_SIZE}`,
       "FONTNAME2=Arial",
       `CUSTOMX=${altiumSheetWidth}`,
       `CUSTOMY=${altiumSheetHeight}`,
@@ -245,13 +256,17 @@ export function createSchematicDocument({
       const altiumPinCenter = circuitToAltiumSchematicPoint(
         asPoint(schematicPort.center) ?? { x: 0, y: 0 },
       )
+      const altiumPinOrientation =
+        ALTIUM_PIN_ORIENTATION_BY_FACING_DIRECTION[
+          asString(schematicPort.facing_direction)
+        ] ?? 2
+      const altiumPinTextVisibilityFlags = schematicSymbolRecords
+        ? 0
+        : ALTIUM_PIN_NAME_VISIBLE_FLAG | ALTIUM_PIN_DESIGNATOR_VISIBLE_FLAG
       const altiumPinConglomerate =
-        {
-          left: 58,
-          right: 56,
-          up: 57,
-          down: 59,
-        }[asString(schematicPort.facing_direction)] ?? 58
+        ALTIUM_PIN_STANDARD_FLAGS |
+        altiumPinTextVisibilityFlags |
+        altiumPinOrientation
       addSchematicRecord(
         [
           "RECORD=2",

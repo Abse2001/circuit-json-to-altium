@@ -49,14 +49,14 @@ export function getSchematicTransform(
     circuitPoints.length > 0
       ? Math.min(...circuitPoints.map((point) => point.x))
       : 0
-  const maxY =
+  const minY =
     circuitPoints.length > 0
-      ? Math.max(...circuitPoints.map((point) => point.y))
+      ? Math.min(...circuitPoints.map((point) => point.y))
       : 0
   const circuitToAltiumSchematicMatrix = compose(
     translate(100, 100),
-    scale(20, -20),
-    translate(-minX, -maxY),
+    scale(20, 20),
+    translate(-minX, -minY),
   )
   const altiumPoints = circuitPoints.map((circuitPoint) =>
     getAltiumSchematicPoint(circuitPoint, circuitToAltiumSchematicMatrix),
