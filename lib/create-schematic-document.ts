@@ -1,3 +1,4 @@
+import { createAltiumSchematicSymbolRecords } from "./create-altium-schematic-symbol-records"
 import {
   asNumber,
   asPoint,
@@ -33,6 +34,17 @@ type SchematicRecordContext = {
 }
 
 type AltiumSchematicPointKey = string
+
+const ALTIUM_SCHEMATIC_COMPONENT_FONT_SIZE = 4
+const ALTIUM_PIN_STANDARD_FLAGS = 0x20
+const ALTIUM_PIN_NAME_VISIBLE_FLAG = 0x08
+const ALTIUM_PIN_DESIGNATOR_VISIBLE_FLAG = 0x10
+const ALTIUM_PIN_ORIENTATION_BY_FACING_DIRECTION: Record<string, number> = {
+  left: 2,
+  right: 0,
+  up: 1,
+  down: 3,
+}
 
 function doesElementBelongToSchematicSheet({
   element,
@@ -86,9 +98,9 @@ export function createSchematicDocument({
     [
       "RECORD=31",
       "FONTIDCOUNT=2",
-      "SIZE1=10",
+      `SIZE1=${ALTIUM_SCHEMATIC_COMPONENT_FONT_SIZE}`,
       "FONTNAME1=Arial",
-      "SIZE2=9",
+      `SIZE2=${ALTIUM_SCHEMATIC_COMPONENT_FONT_SIZE}`,
       "FONTNAME2=Arial",
       `CUSTOMX=${altiumSheetWidth}`,
       `CUSTOMY=${altiumSheetHeight}`,
@@ -166,36 +178,53 @@ export function createSchematicDocument({
       15,
       Math.round(asNumber(componentSize.height, 1.5) * 10),
     )
-    addSchematicRecord(
-      [
-        "RECORD=14",
-        `OWNERINDEX=${altiumComponentRecordIndex}`,
-        "OWNERPARTID=1",
-        `LOCATION.X=${altiumComponentCenter.x - altiumHalfWidth}`,
-        `LOCATION.Y=${altiumComponentCenter.y - altiumHalfHeight}`,
-        `CORNER.X=${altiumComponentCenter.x + altiumHalfWidth}`,
-        `CORNER.Y=${altiumComponentCenter.y + altiumHalfHeight}`,
-        "LINEWIDTH=1",
-        "COLOR=136",
-        "AREACOLOR=16777215",
-        "ISSOLID=F",
-      ],
-      schematicRecordContext,
-    )
+    const schematicSymbolRecords = createAltiumSchematicSymbolRecords({
+      altiumComponentRecordIndex,
+      circuitComponentCenter: asPoint(schematicComponent.center) ?? {
+        x: 0,
+        y: 0,
+      },
+      circuitToAltiumSchematicPoint,
+      symbolName: asString(schematicComponent.symbol_name),
+    })
+    if (schematicSymbolRecords) {
+      for (const graphicRecordFields of schematicSymbolRecords.graphicRecordFields) {
+        addSchematicRecord(graphicRecordFields, schematicRecordContext)
+      }
+    } else {
+      addSchematicRecord(
+        [
+          "RECORD=14",
+          `OWNERINDEX=${altiumComponentRecordIndex}`,
+          "OWNERPARTID=1",
+          `LOCATION.X=${altiumComponentCenter.x - altiumHalfWidth}`,
+          `LOCATION.Y=${altiumComponentCenter.y - altiumHalfHeight}`,
+          `CORNER.X=${altiumComponentCenter.x + altiumHalfWidth}`,
+          `CORNER.Y=${altiumComponentCenter.y + altiumHalfHeight}`,
+          "LINEWIDTH=1",
+          "COLOR=136",
+          "AREACOLOR=16777215",
+          "ISSOLID=F",
+        ],
+        schematicRecordContext,
+      )
+    }
+    const designatorPlacement = schematicSymbolRecords?.designatorPlacement
+    const commentPlacement = schematicSymbolRecords?.commentPlacement
     addSchematicRecord(
       [
         "RECORD=34",
         `OWNERINDEX=${altiumComponentRecordIndex}`,
         "OWNERPARTID=-1",
-        `LOCATION.X=${altiumComponentCenter.x - altiumHalfWidth}`,
-        `LOCATION.Y=${altiumComponentCenter.y - altiumHalfHeight - 12}`,
+        `LOCATION.X=${designatorPlacement?.position.x ?? altiumComponentCenter.x - altiumHalfWidth}`,
+        `LOCATION.Y=${designatorPlacement?.position.y ?? altiumComponentCenter.y - altiumHalfHeight - 12}`,
         "FONTID=1",
         "NAME=Designator",
         `TEXT=${designator}`,
         "SHOWNAME=F",
         "ISHIDDEN=F",
         "ORIENTATION=0",
-        "JUSTIFICATION=0",
+        `JUSTIFICATION=${designatorPlacement?.justification ?? 0}`,
       ],
       schematicRecordContext,
     )
@@ -204,15 +233,15 @@ export function createSchematicDocument({
         "RECORD=41",
         `OWNERINDEX=${altiumComponentRecordIndex}`,
         "OWNERPARTID=-1",
-        `LOCATION.X=${altiumComponentCenter.x - altiumHalfWidth}`,
-        `LOCATION.Y=${altiumComponentCenter.y + altiumHalfHeight + 12}`,
+        `LOCATION.X=${commentPlacement?.position.x ?? altiumComponentCenter.x - altiumHalfWidth}`,
+        `LOCATION.Y=${commentPlacement?.position.y ?? altiumComponentCenter.y + altiumHalfHeight + 12}`,
         "FONTID=2",
         "NAME=Comment",
         `TEXT=${componentComment}`,
         "SHOWNAME=F",
         "ISHIDDEN=F",
         "ORIENTATION=0",
-        "JUSTIFICATION=0",
+        `JUSTIFICATION=${commentPlacement?.justification ?? 0}`,
       ],
       schematicRecordContext,
     )
@@ -227,13 +256,17 @@ export function createSchematicDocument({
       const altiumPinCenter = circuitToAltiumSchematicPoint(
         asPoint(schematicPort.center) ?? { x: 0, y: 0 },
       )
+      const altiumPinOrientation =
+        ALTIUM_PIN_ORIENTATION_BY_FACING_DIRECTION[
+          asString(schematicPort.facing_direction)
+        ] ?? 2
+      const altiumPinTextVisibilityFlags = schematicSymbolRecords
+        ? 0
+        : ALTIUM_PIN_NAME_VISIBLE_FLAG | ALTIUM_PIN_DESIGNATOR_VISIBLE_FLAG
       const altiumPinConglomerate =
-        {
-          left: 58,
-          right: 56,
-          up: 57,
-          down: 59,
-        }[asString(schematicPort.facing_direction)] ?? 58
+        ALTIUM_PIN_STANDARD_FLAGS |
+        altiumPinTextVisibilityFlags |
+        altiumPinOrientation
       addSchematicRecord(
         [
           "RECORD=2",
