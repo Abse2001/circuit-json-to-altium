@@ -12,6 +12,7 @@ test("round-trips the open-source SimpleFOC Mini Altium board", async () => {
   expect(result.roundTripSourceNetNames).toEqual(result.sourceNetNames)
   expect(result.geometryMaxDeltaMm).toBeLessThan(0.03)
   expect(result.rotationMismatchCount).toBe(0)
+  expect(result.silkscreenTextMismatchCount).toBe(0)
   expect(result.sourcePrimitiveTotal).toBeGreaterThan(500)
   await expect(
     createSideBySideSvg(result.sourceSvg, result.roundTripSvg),

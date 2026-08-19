@@ -10,6 +10,7 @@ import {
   normalizeAltiumAngle,
   parseAltiumMeasurementToMils,
 } from "altiumts"
+import type { NinePointAnchor } from "circuit-json"
 import type { CircuitElement } from "../../lib/types"
 
 const MILLIMETERS_PER_MIL = 0.0254
@@ -89,6 +90,31 @@ function normalizeLayer(layer: string | undefined): string {
 
 function toCircuitLayer(layer: string | undefined): "bottom" | "top" {
   return normalizeLayer(layer).includes("BOTTOM") ? "bottom" : "top"
+}
+
+function toCircuitTextAnchorAlignment(
+  altiumJustification: number | undefined,
+): NinePointAnchor {
+  switch (altiumJustification) {
+    case 1:
+      return "top_left"
+    case 2:
+      return "center_left"
+    case 4:
+      return "top_center"
+    case 5:
+      return "center"
+    case 6:
+      return "bottom_center"
+    case 7:
+      return "top_right"
+    case 8:
+      return "center_right"
+    case 9:
+      return "bottom_right"
+    default:
+      return "bottom_left"
+  }
 }
 
 function toCircuitCopperLayer(
@@ -616,8 +642,14 @@ export function convertAltiumPcbToCircuitJson(
       ...(pcbComponentId ? { pcb_component_id: pcbComponentId } : {}),
       text: getText(text),
       anchor_position: toCircuitPoint(position),
+      anchor_alignment: toCircuitTextAnchorAlignment(
+        text.getNumber("JUSTIFICATION"),
+      ),
       font_size: toCircuitLength(getMeasurementMils(text, "HEIGHT") ?? 30),
+      font: "tscircuit2024",
       ccw_rotation: toCircuitRotation(text.getNumber("ROTATION") ?? 0),
+      is_mirrored:
+        text.getBoolean("MIRROR") ?? toCircuitLayer(layer) === "bottom",
       layer: toCircuitLayer(layer),
     })
   }
