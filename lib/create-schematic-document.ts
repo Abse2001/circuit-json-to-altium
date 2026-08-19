@@ -2,6 +2,7 @@ import { createAltiumSchematicSymbolRecords } from "./create-altium-schematic-sy
 import {
   asNumber,
   asPoint,
+  asPositiveNumber,
   asString,
   byType,
   isCircuitElement,
@@ -10,6 +11,8 @@ import {
 import { getSchematicTransform } from "./get-schematic-transform"
 import type {
   CircuitElement,
+  Point,
+  PointTransform,
   SchematicComponentId,
   SchematicSheetId,
   SourceComponentId,
@@ -35,6 +38,27 @@ type SchematicRecordContext = {
 
 type AltiumSchematicPointKey = string
 
+type AltiumSchematicBoxBounds = {
+  bottom: number
+  left: number
+  right: number
+  top: number
+}
+
+type BoxedSchematicPinGeometryParams = {
+  circuitPinTerminal: Point
+  circuitToAltiumSchematicPoint: PointTransform
+  distanceFromComponentEdge: number
+  facingDirection: string
+}
+
+type FallbackSchematicBoxBoundsParams = {
+  circuitComponentCenter: Point
+  circuitComponentHeight: number
+  circuitComponentWidth: number
+  circuitToAltiumSchematicPoint: PointTransform
+}
+
 const ALTIUM_SCHEMATIC_COMPONENT_FONT_SIZE = 4
 const ALTIUM_PIN_STANDARD_FLAGS = 0x20
 const ALTIUM_PIN_NAME_VISIBLE_FLAG = 0x08
@@ -44,6 +68,64 @@ const ALTIUM_PIN_ORIENTATION_BY_FACING_DIRECTION: Record<string, number> = {
   right: 0,
   up: 1,
   down: 3,
+}
+const DEFAULT_PIN_OUTWARD_DIRECTION: Point = { x: -1, y: 0 }
+const PIN_OUTWARD_DIRECTION_BY_FACING_DIRECTION: Record<string, Point> = {
+  left: DEFAULT_PIN_OUTWARD_DIRECTION,
+  right: { x: 1, y: 0 },
+  up: { x: 0, y: 1 },
+  down: { x: 0, y: -1 },
+}
+
+function getFallbackSchematicBoxBounds({
+  circuitComponentCenter,
+  circuitComponentHeight,
+  circuitComponentWidth,
+  circuitToAltiumSchematicPoint,
+}: FallbackSchematicBoxBoundsParams): AltiumSchematicBoxBounds {
+  const firstCorner = circuitToAltiumSchematicPoint({
+    x: circuitComponentCenter.x - circuitComponentWidth / 2,
+    y: circuitComponentCenter.y - circuitComponentHeight / 2,
+  })
+  const oppositeCorner = circuitToAltiumSchematicPoint({
+    x: circuitComponentCenter.x + circuitComponentWidth / 2,
+    y: circuitComponentCenter.y + circuitComponentHeight / 2,
+  })
+  return {
+    bottom: Math.min(firstCorner.y, oppositeCorner.y),
+    left: Math.min(firstCorner.x, oppositeCorner.x),
+    right: Math.max(firstCorner.x, oppositeCorner.x),
+    top: Math.max(firstCorner.y, oppositeCorner.y),
+  }
+}
+
+function getBoxedSchematicPinGeometry({
+  circuitPinTerminal,
+  circuitToAltiumSchematicPoint,
+  distanceFromComponentEdge,
+  facingDirection,
+}: BoxedSchematicPinGeometryParams): { length: number; location: Point } {
+  const outwardDirection =
+    PIN_OUTWARD_DIRECTION_BY_FACING_DIRECTION[facingDirection] ??
+    DEFAULT_PIN_OUTWARD_DIRECTION
+  const circuitPinBody = {
+    x: circuitPinTerminal.x - outwardDirection.x * distanceFromComponentEdge,
+    y: circuitPinTerminal.y - outwardDirection.y * distanceFromComponentEdge,
+  }
+  const altiumPinBody = circuitToAltiumSchematicPoint(circuitPinBody)
+  const altiumPinTerminal = circuitToAltiumSchematicPoint(circuitPinTerminal)
+  return {
+    length: Math.max(
+      1,
+      Math.round(
+        Math.hypot(
+          altiumPinTerminal.x - altiumPinBody.x,
+          altiumPinTerminal.y - altiumPinBody.y,
+        ),
+      ),
+    ),
+    location: altiumPinBody,
+  }
 }
 
 function doesElementBelongToSchematicSheet({
@@ -139,18 +221,21 @@ export function createSchematicDocument({
   for (const [componentNumber, schematicComponent] of schematicElements
     .filter((element) => element.type === "schematic_component")
     .entries()) {
+    const circuitComponentCenter = asPoint(schematicComponent.center) ?? {
+      x: 0,
+      y: 0,
+    }
     const altiumComponentCenter = circuitToAltiumSchematicPoint(
-      asPoint(schematicComponent.center) ?? { x: 0, y: 0 },
+      circuitComponentCenter,
     )
     const sourceComponent = sourceComponents.get(
       asString(schematicComponent.source_component_id),
     )
     const designator =
       sanitizeField(sourceComponent?.name) || `U${componentNumber + 1}`
-    const componentComment =
-      sanitizeField(schematicComponent.symbol_display_value) ||
-      sanitizeField(schematicComponent.symbol_name) ||
-      designator
+    const componentComment = sanitizeField(
+      schematicComponent.symbol_display_value,
+    )
     const libraryReference =
       sanitizeField(schematicComponent.symbol_name) || designator
     const altiumComponentRecordIndex = addSchematicRecord(
@@ -170,20 +255,17 @@ export function createSchematicDocument({
     const componentSize = isCircuitElement(schematicComponent.size)
       ? schematicComponent.size
       : {}
-    const altiumHalfWidth = Math.max(
-      20,
-      Math.round(asNumber(componentSize.width, 2) * 10),
-    )
-    const altiumHalfHeight = Math.max(
-      15,
-      Math.round(asNumber(componentSize.height, 1.5) * 10),
-    )
+    const circuitComponentWidth = asPositiveNumber(componentSize.width, 2)
+    const circuitComponentHeight = asPositiveNumber(componentSize.height, 1.5)
+    const fallbackSchematicBoxBounds = getFallbackSchematicBoxBounds({
+      circuitComponentCenter,
+      circuitComponentHeight,
+      circuitComponentWidth,
+      circuitToAltiumSchematicPoint,
+    })
     const schematicSymbolRecords = createAltiumSchematicSymbolRecords({
       altiumComponentRecordIndex,
-      circuitComponentCenter: asPoint(schematicComponent.center) ?? {
-        x: 0,
-        y: 0,
-      },
+      circuitComponentCenter,
       circuitToAltiumSchematicPoint,
       symbolName: asString(schematicComponent.symbol_name),
     })
@@ -197,10 +279,10 @@ export function createSchematicDocument({
           "RECORD=14",
           `OWNERINDEX=${altiumComponentRecordIndex}`,
           "OWNERPARTID=1",
-          `LOCATION.X=${altiumComponentCenter.x - altiumHalfWidth}`,
-          `LOCATION.Y=${altiumComponentCenter.y - altiumHalfHeight}`,
-          `CORNER.X=${altiumComponentCenter.x + altiumHalfWidth}`,
-          `CORNER.Y=${altiumComponentCenter.y + altiumHalfHeight}`,
+          `LOCATION.X=${fallbackSchematicBoxBounds.left}`,
+          `LOCATION.Y=${fallbackSchematicBoxBounds.bottom}`,
+          `CORNER.X=${fallbackSchematicBoxBounds.right}`,
+          `CORNER.Y=${fallbackSchematicBoxBounds.top}`,
           "LINEWIDTH=1",
           "COLOR=136",
           "AREACOLOR=16777215",
@@ -216,8 +298,8 @@ export function createSchematicDocument({
         "RECORD=34",
         `OWNERINDEX=${altiumComponentRecordIndex}`,
         "OWNERPARTID=-1",
-        `LOCATION.X=${designatorPlacement?.position.x ?? altiumComponentCenter.x - altiumHalfWidth}`,
-        `LOCATION.Y=${designatorPlacement?.position.y ?? altiumComponentCenter.y - altiumHalfHeight - 12}`,
+        `LOCATION.X=${designatorPlacement?.position.x ?? fallbackSchematicBoxBounds.left}`,
+        `LOCATION.Y=${designatorPlacement?.position.y ?? fallbackSchematicBoxBounds.top + 12}`,
         "FONTID=1",
         "NAME=Designator",
         `TEXT=${designator}`,
@@ -233,13 +315,13 @@ export function createSchematicDocument({
         "RECORD=41",
         `OWNERINDEX=${altiumComponentRecordIndex}`,
         "OWNERPARTID=-1",
-        `LOCATION.X=${commentPlacement?.position.x ?? altiumComponentCenter.x - altiumHalfWidth}`,
-        `LOCATION.Y=${commentPlacement?.position.y ?? altiumComponentCenter.y + altiumHalfHeight + 12}`,
+        `LOCATION.X=${commentPlacement?.position.x ?? fallbackSchematicBoxBounds.left}`,
+        `LOCATION.Y=${commentPlacement?.position.y ?? fallbackSchematicBoxBounds.bottom - 12}`,
         "FONTID=2",
         "NAME=Comment",
         `TEXT=${componentComment}`,
         "SHOWNAME=F",
-        "ISHIDDEN=F",
+        `ISHIDDEN=${componentComment ? "F" : "T"}`,
         "ORIENTATION=0",
         `JUSTIFICATION=${commentPlacement?.justification ?? 0}`,
       ],
@@ -253,13 +335,25 @@ export function createSchematicDocument({
       schematicPortsByComponentId.get(schematicComponentId) ?? []
     for (const [pinIndex, schematicPort] of schematicPorts.entries()) {
       const sourcePort = sourcePorts.get(asString(schematicPort.source_port_id))
-      const altiumPinCenter = circuitToAltiumSchematicPoint(
-        asPoint(schematicPort.center) ?? { x: 0, y: 0 },
-      )
+      const circuitPinTerminal = asPoint(schematicPort.center) ?? { x: 0, y: 0 }
+      const facingDirection = asString(schematicPort.facing_direction)
+      const boxedSchematicPinGeometry = getBoxedSchematicPinGeometry({
+        circuitPinTerminal,
+        circuitToAltiumSchematicPoint,
+        distanceFromComponentEdge: Math.max(
+          asNumber(schematicPort.distance_from_component_edge),
+          0,
+        ),
+        facingDirection,
+      })
+      const altiumPinLocation = schematicSymbolRecords
+        ? circuitToAltiumSchematicPoint(circuitPinTerminal)
+        : boxedSchematicPinGeometry.location
+      const altiumPinLength = schematicSymbolRecords
+        ? 10
+        : boxedSchematicPinGeometry.length
       const altiumPinOrientation =
-        ALTIUM_PIN_ORIENTATION_BY_FACING_DIRECTION[
-          asString(schematicPort.facing_direction)
-        ] ?? 2
+        ALTIUM_PIN_ORIENTATION_BY_FACING_DIRECTION[facingDirection] ?? 2
       const altiumPinTextVisibilityFlags = schematicSymbolRecords
         ? 0
         : ALTIUM_PIN_NAME_VISIBLE_FLAG | ALTIUM_PIN_DESIGNATOR_VISIBLE_FLAG
@@ -275,9 +369,9 @@ export function createSchematicDocument({
           `DESIGNATOR=${sanitizeField(sourcePort?.pin_number) || pinIndex + 1}`,
           `NAME=${sanitizeField(schematicPort.display_pin_label) || sanitizeField(sourcePort?.name) || `Pin ${pinIndex + 1}`}`,
           `PINCONGLOMERATE=${altiumPinConglomerate}`,
-          `LOCATION.X=${altiumPinCenter.x}`,
-          `LOCATION.Y=${altiumPinCenter.y}`,
-          "PINLENGTH=10",
+          `LOCATION.X=${altiumPinLocation.x}`,
+          `LOCATION.Y=${altiumPinLocation.y}`,
+          `PINLENGTH=${altiumPinLength}`,
           "COLOR=136",
           "FONTID=2",
         ],
