@@ -11,6 +11,7 @@ import type {
 export type PcbNetEntry = {
   index: number
   name: PcbNetName
+  sourceNetIds: SourceNetId[]
   sourcePortIds: SourcePortId[]
   traceIds: SourceTraceId[]
 }
@@ -66,57 +67,81 @@ export const createPcbNetEntries = (
     ])
   }
   const useCountByPcbNetName = new Map<PcbNetName, number>()
-  return [...traceIndexesByRoot.values()].map((traceIndexes, index) => {
-    const traces = traceIndexes.flatMap((traceIndex) => {
-      const trace = sourceTraces[traceIndex]
-      return trace ? [trace] : []
+  const netEntries = [...traceIndexesByRoot.values()].map(
+    (traceIndexes, index): PcbNetEntry => {
+      const traces = traceIndexes.flatMap((traceIndex) => {
+        const trace = sourceTraces[traceIndex]
+        return trace ? [trace] : []
+      })
+      const sourceNetIds = [
+        ...new Set(
+          traces.flatMap((trace) =>
+            Array.isArray(trace.connected_source_net_ids)
+              ? trace.connected_source_net_ids
+                  .map((sourceNetId) => asString(sourceNetId))
+                  .filter(Boolean)
+              : [],
+          ),
+        ),
+      ]
+      const sourcePortIds = [
+        ...new Set(
+          traces.flatMap((trace) =>
+            Array.isArray(trace.connected_source_port_ids)
+              ? trace.connected_source_port_ids
+                  .map((sourcePortId) => asString(sourcePortId))
+                  .filter(Boolean)
+              : [],
+          ),
+        ),
+      ]
+      const basePcbNetName =
+        sourceNetIds.map((id) => sourceNets.get(id)).find(Boolean) ||
+        traces
+          .map(
+            (trace) =>
+              sanitizeField(trace.name) || sanitizeField(trace.display_name),
+          )
+          .find(Boolean) ||
+        `Net-${index + 1}`
+      const pcbNetNameUseCount =
+        (useCountByPcbNetName.get(basePcbNetName) ?? 0) + 1
+      useCountByPcbNetName.set(basePcbNetName, pcbNetNameUseCount)
+      return {
+        index,
+        name:
+          pcbNetNameUseCount === 1
+            ? basePcbNetName
+            : `${basePcbNetName}-${pcbNetNameUseCount}`,
+        sourceNetIds,
+        sourcePortIds,
+        traceIds: traces.map(
+          (trace, traceOffset) =>
+            asString(trace.source_trace_id) ||
+            `source_trace_${traceIndexes[traceOffset] ?? traceOffset}`,
+        ),
+      }
+    },
+  )
+
+  const connectedSourceNetIds = new Set(
+    netEntries.flatMap((netEntry) => netEntry.sourceNetIds),
+  )
+  const copperPourSourceNetIds = new Set(
+    byType(circuitJson, "pcb_copper_pour")
+      .map((copperPour) => asString(copperPour.source_net_id))
+      .filter(Boolean),
+  )
+  for (const sourceNetId of copperPourSourceNetIds) {
+    if (connectedSourceNetIds.has(sourceNetId)) continue
+    netEntries.push({
+      index: netEntries.length,
+      name: sourceNets.get(sourceNetId) ?? sourceNetId,
+      sourceNetIds: [sourceNetId],
+      sourcePortIds: [],
+      traceIds: [],
     })
-    const sourceNetIds = [
-      ...new Set(
-        traces.flatMap((trace) =>
-          Array.isArray(trace.connected_source_net_ids)
-            ? trace.connected_source_net_ids
-                .map((sourceNetId) => asString(sourceNetId))
-                .filter(Boolean)
-            : [],
-        ),
-      ),
-    ]
-    const sourcePortIds = [
-      ...new Set(
-        traces.flatMap((trace) =>
-          Array.isArray(trace.connected_source_port_ids)
-            ? trace.connected_source_port_ids
-                .map((sourcePortId) => asString(sourcePortId))
-                .filter(Boolean)
-            : [],
-        ),
-      ),
-    ]
-    const basePcbNetName =
-      sourceNetIds.map((id) => sourceNets.get(id)).find(Boolean) ||
-      traces
-        .map(
-          (trace) =>
-            sanitizeField(trace.name) || sanitizeField(trace.display_name),
-        )
-        .find(Boolean) ||
-      `Net-${index + 1}`
-    const pcbNetNameUseCount =
-      (useCountByPcbNetName.get(basePcbNetName) ?? 0) + 1
-    useCountByPcbNetName.set(basePcbNetName, pcbNetNameUseCount)
-    return {
-      index,
-      name:
-        pcbNetNameUseCount === 1
-          ? basePcbNetName
-          : `${basePcbNetName}-${pcbNetNameUseCount}`,
-      sourcePortIds,
-      traceIds: traces.map(
-        (trace, traceOffset) =>
-          asString(trace.source_trace_id) ||
-          `source_trace_${traceIndexes[traceOffset] ?? traceOffset}`,
-      ),
-    }
-  })
+  }
+
+  return netEntries
 }

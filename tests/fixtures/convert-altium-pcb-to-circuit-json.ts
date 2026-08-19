@@ -1,8 +1,12 @@
 import {
   type AltiumComponentRecord,
+  type AltiumNetRecord,
   type AltiumPcbDocument,
   type AltiumPoint,
   type AltiumRecord,
+  getPcbContour,
+  getPcbRegionGeometry,
+  getPcbRegionSemanticKind,
   normalizeAltiumAngle,
   parseAltiumMeasurementToMils,
 } from "altiumts"
@@ -13,6 +17,34 @@ const MILLIMETERS_PER_MIL = 0.0254
 type CircuitPoint = {
   x: number
   y: number
+}
+
+type CircuitCopperLayer =
+  | "bottom"
+  | "inner1"
+  | "inner2"
+  | "inner3"
+  | "inner4"
+  | "inner5"
+  | "inner6"
+  | "inner7"
+  | "inner8"
+  | "top"
+
+const CIRCUIT_INNER_COPPER_LAYERS = [
+  "inner1",
+  "inner2",
+  "inner3",
+  "inner4",
+  "inner5",
+  "inner6",
+  "inner7",
+  "inner8",
+] as const
+
+type SourceNetLookupContext = {
+  document: AltiumPcbDocument
+  sourceNetIds: Map<AltiumNetRecord, string>
 }
 
 function toCircuitPoint(point: AltiumPoint): CircuitPoint {
@@ -57,6 +89,17 @@ function normalizeLayer(layer: string | undefined): string {
 
 function toCircuitLayer(layer: string | undefined): "bottom" | "top" {
   return normalizeLayer(layer).includes("BOTTOM") ? "bottom" : "top"
+}
+
+function toCircuitCopperLayer(
+  layer: string | undefined,
+): CircuitCopperLayer | undefined {
+  const normalized = normalizeLayer(layer)
+  if (normalized === "TOP") return "top"
+  if (normalized === "BOTTOM") return "bottom"
+  const innerLayerMatch = /^MIDLAYER([1-8])$/u.exec(normalized)
+  if (!innerLayerMatch?.[1]) return undefined
+  return CIRCUIT_INNER_COPPER_LAYERS[Number(innerLayerMatch[1]) - 1]
 }
 
 function isCopperLayer(layer: string | undefined): boolean {
@@ -194,6 +237,124 @@ function appendCopperTrace(
   })
 }
 
+function getSourceNetId(
+  record: AltiumRecord,
+  context: SourceNetLookupContext,
+): string | undefined {
+  const net = context.document.getNetForRecord(record)
+  return net ? context.sourceNetIds.get(net) : undefined
+}
+
+function toCircuitBrepRing(points: AltiumPoint[]): CircuitPoint[] {
+  const ring = points.map(toCircuitPoint)
+  const firstPoint = ring[0]
+  const lastPoint = ring.at(-1)
+  if (
+    firstPoint &&
+    lastPoint &&
+    firstPoint.x === lastPoint.x &&
+    firstPoint.y === lastPoint.y
+  ) {
+    ring.pop()
+  }
+  return ring
+}
+
+function appendCopperPourElements({
+  document,
+  elements,
+  sourceNetLookupContext,
+}: {
+  document: AltiumPcbDocument
+  elements: CircuitElement[]
+  sourceNetLookupContext: SourceNetLookupContext
+}): void {
+  const copperRegions = [
+    ...document.getRecordsByKind("Region"),
+    ...document.getRecordsByKind("RegionFill"),
+  ].filter(
+    (record) =>
+      getPcbRegionSemanticKind(record) === "COPPER" &&
+      toCircuitCopperLayer(record.getDecoded("LAYER")) !== undefined,
+  )
+  const pouredPolygonIndexes = new Set(
+    copperRegions.flatMap((region) => {
+      const polygonIndex = region.getNumber("POLYGON")
+      return polygonIndex === undefined || polygonIndex === 65_535
+        ? []
+        : [polygonIndex]
+    }),
+  )
+
+  for (const [regionIndex, region] of copperRegions.entries()) {
+    const layer = toCircuitCopperLayer(region.getDecoded("LAYER"))
+    const geometry = getPcbRegionGeometry(region)
+    if (!layer || geometry.outline.points.length < 3) continue
+    const sourceNetId = getSourceNetId(region, sourceNetLookupContext)
+    elements.push({
+      type: "pcb_copper_pour",
+      pcb_copper_pour_id: `pcb_copper_pour_region_${regionIndex}`,
+      ...(sourceNetId ? { source_net_id: sourceNetId } : {}),
+      covered_with_solder_mask: true,
+      shape: "brep",
+      brep_shape: {
+        outer_ring: {
+          vertices: toCircuitBrepRing(geometry.outline.points),
+        },
+        inner_rings: geometry.holes.map((hole) => ({
+          vertices: toCircuitBrepRing(hole.points),
+        })),
+      },
+      layer,
+    })
+  }
+
+  for (const [polygonIndex, polygon] of document.polygons.entries()) {
+    if (pouredPolygonIndexes.has(polygonIndex)) continue
+    const layer = toCircuitCopperLayer(polygon.layer)
+    const points = toCircuitBrepRing(getPcbContour(polygon).points)
+    if (!layer || points.length < 3) continue
+    const sourceNetId = getSourceNetId(polygon, sourceNetLookupContext)
+    elements.push({
+      type: "pcb_copper_pour",
+      pcb_copper_pour_id: `pcb_copper_pour_polygon_${polygonIndex}`,
+      ...(sourceNetId ? { source_net_id: sourceNetId } : {}),
+      covered_with_solder_mask: true,
+      shape: "polygon",
+      points,
+      layer,
+    })
+  }
+
+  const copperFills = document
+    .getRecordsByKind("Fill")
+    .filter(
+      (fill) => toCircuitCopperLayer(fill.getDecoded("LAYER")) !== undefined,
+    )
+  for (const [fillIndex, fill] of copperFills.entries()) {
+    const start = getPoint(fill, "X1", "Y1")
+    const end = getPoint(fill, "X2", "Y2")
+    const layer = toCircuitCopperLayer(fill.getDecoded("LAYER"))
+    if (!start || !end || !layer) continue
+    const sourceNetId = getSourceNetId(fill, sourceNetLookupContext)
+    elements.push({
+      type: "pcb_copper_pour",
+      pcb_copper_pour_id: `pcb_copper_pour_fill_${fillIndex}`,
+      ...(sourceNetId ? { source_net_id: sourceNetId } : {}),
+      covered_with_solder_mask: true,
+      shape: "rect",
+      center: toCircuitPoint({
+        x: (start.x + end.x) / 2,
+        y: (start.y + end.y) / 2,
+      }),
+      width: toCircuitLength(Math.abs(end.x - start.x)),
+      height: toCircuitLength(Math.abs(end.y - start.y)),
+      rotation: toCircuitRotation(fill.getNumber("ROTATION") ?? 0),
+      layer,
+    })
+  }
+}
+
 export function convertAltiumPcbToCircuitJson(
   document: AltiumPcbDocument,
 ): CircuitElement[] {
@@ -211,10 +372,9 @@ export function convertAltiumPcbToCircuitJson(
       name: net.name ?? sourceNetId,
     })
   }
-
-  const getSourceNetId = (record: AltiumRecord): string | undefined => {
-    const net = document.getNetForRecord(record)
-    return net ? sourceNetIds.get(net) : undefined
+  const sourceNetLookupContext: SourceNetLookupContext = {
+    document,
+    sourceNetIds,
   }
 
   const componentIds = getComponentIds(document)
@@ -279,7 +439,7 @@ export function convertAltiumPcbToCircuitJson(
       },
     )
 
-    const sourceNetId = getSourceNetId(pad)
+    const sourceNetId = getSourceNetId(pad, sourceNetLookupContext)
     if (sourceNetId) {
       appendNetConnection(
         elements,
@@ -362,7 +522,7 @@ export function convertAltiumPcbToCircuitJson(
       appendCopperTrace(
         elements,
         `source_trace_track_${trackIndex}`,
-        getSourceNetId(track),
+        getSourceNetId(track, sourceNetLookupContext),
         toCircuitLayer(layer),
         widthMils,
         start,
@@ -393,7 +553,7 @@ export function convertAltiumPcbToCircuitJson(
         appendCopperTrace(
           elements,
           `source_trace_arc_${arcIndex}_${segmentIndex - 1}`,
-          getSourceNetId(arc),
+          getSourceNetId(arc, sourceNetLookupContext),
           toCircuitLayer(layer),
           widthMils,
           start,
@@ -416,7 +576,7 @@ export function convertAltiumPcbToCircuitJson(
   for (const [viaIndex, via] of document.getRecordsByKind("Via").entries()) {
     const position = getPoint(via, "X", "Y")
     if (!position) continue
-    const sourceNetId = getSourceNetId(via)
+    const sourceNetId = getSourceNetId(via, sourceNetLookupContext)
     const sourceTraceId = `source_trace_via_${viaIndex}`
     if (sourceNetId) {
       appendNetConnection(elements, sourceTraceId, sourceNetId)
@@ -432,6 +592,12 @@ export function convertAltiumPcbToCircuitJson(
       hole_diameter: toCircuitLength(getMeasurementMils(via, "HOLESIZE") ?? 10),
     })
   }
+
+  appendCopperPourElements({
+    document,
+    elements,
+    sourceNetLookupContext,
+  })
 
   for (const [textIndex, text] of document.getRecordsByKind("Text").entries()) {
     const layer = text.getDecoded("LAYER")

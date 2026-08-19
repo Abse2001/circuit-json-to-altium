@@ -7,7 +7,7 @@
   },
   "files": {
     "includes": ["**", "!**/cosmos-export", "!**/dist", "!**/package.json"],
-    "maxSize": 10485760
+    "maxSize": 12582912
   },
   "javascript": {
     "formatter": {

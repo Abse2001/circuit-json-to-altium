@@ -11,6 +11,7 @@ const preservedPrimitiveTypes = [
   "source_trace",
   "pcb_trace",
   "pcb_via",
+  "pcb_copper_pour",
 ] as const
 
 const geometryElementTypes = [
