@@ -12,6 +12,7 @@ import {
 } from "altiumts"
 import type { NinePointAnchor } from "circuit-json"
 import type { CircuitElement } from "../../lib/types"
+import { convertAltiumPcbAnnotationsToCircuitJson } from "./convert-altium-pcb-annotations-to-circuit-json"
 
 const MILLIMETERS_PER_MIL = 0.0254
 
@@ -301,6 +302,7 @@ function appendCopperPourElements({
   ].filter(
     (record) =>
       getPcbRegionSemanticKind(record) === "COPPER" &&
+      record.getBoolean("KEEPOUT") !== true &&
       toCircuitCopperLayer(record.getDecoded("LAYER")) !== undefined,
   )
   const pouredPolygonIndexes = new Set(
@@ -355,7 +357,9 @@ function appendCopperPourElements({
   const copperFills = document
     .getRecordsByKind("Fill")
     .filter(
-      (fill) => toCircuitCopperLayer(fill.getDecoded("LAYER")) !== undefined,
+      (fill) =>
+        fill.getBoolean("KEEPOUT") !== true &&
+        toCircuitCopperLayer(fill.getDecoded("LAYER")) !== undefined,
     )
   for (const [fillIndex, fill] of copperFills.entries()) {
     const start = getPoint(fill, "X1", "Y1")
@@ -653,6 +657,10 @@ export function convertAltiumPcbToCircuitJson(
       layer: toCircuitLayer(layer),
     })
   }
+
+  elements.push(
+    ...convertAltiumPcbAnnotationsToCircuitJson({ componentIds, document }),
+  )
 
   return elements
 }
