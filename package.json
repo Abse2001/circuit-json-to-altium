@@ -13,6 +13,7 @@
     "format:check": "biome check .",
     "test": "bun test",
     "typecheck": "bunx tsc --noEmit",
+    "verify-open-source-boards": "bun run scripts/verify-open-source-references.ts",
     "verify-open-source-references": "bun run scripts/verify-open-source-references.ts"
   },
   "repository": {
