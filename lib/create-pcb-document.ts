@@ -1,6 +1,9 @@
 import { convertCircuitPcbCcwRotationDegreesToAltium } from "./convert-circuit-pcb-ccw-rotation-degrees-to-altium"
 import { createCircuitToAltiumPcbPointTransform } from "./create-circuit-to-altium-pcb-point-transform"
 import { createPcbCopperPourRecords } from "./create-pcb-copper-pour-records"
+import { createPcbCourtyardRecords } from "./create-pcb-courtyard-records"
+import { createPcbDocumentationRecords } from "./create-pcb-documentation-records"
+import { createPcbKeepoutRecords } from "./create-pcb-keepout-records"
 import { createPcbNetEntries, type PcbNetEntry } from "./create-pcb-net-entries"
 import { createPcbSilkscreenTextRecord } from "./create-pcb-silkscreen-text-record"
 import {
@@ -151,6 +154,23 @@ export const createPcbDocument = (circuitJson: CircuitElement[]): string => {
       ].join("|"),
     )
   }
+
+  lines.push(
+    ...createPcbKeepoutRecords({
+      circuitJson,
+      circuitToAltiumPcbPoint,
+    }),
+    ...createPcbCourtyardRecords({
+      circuitJson,
+      circuitToAltiumPcbPoint,
+      componentIndex,
+    }),
+    ...createPcbDocumentationRecords({
+      circuitJson,
+      circuitToAltiumPcbPoint,
+      componentIndex,
+    }),
+  )
 
   const padLookupContext: PadLookupContext = {
     netBySourcePortId,

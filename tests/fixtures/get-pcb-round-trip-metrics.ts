@@ -14,6 +14,14 @@ const preservedPrimitiveTypes = [
   "pcb_via",
   "pcb_copper_pour",
   "pcb_silkscreen_text",
+  "pcb_courtyard_outline",
+  "pcb_keepout",
+  "pcb_fabrication_note_path",
+  "pcb_fabrication_note_text",
+  "pcb_fabrication_note_dimension",
+  "pcb_note_path",
+  "pcb_note_text",
+  "pcb_note_dimension",
 ] as const
 
 const geometryElementTypes = [
