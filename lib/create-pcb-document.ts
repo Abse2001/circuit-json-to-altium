@@ -2,6 +2,7 @@ import { convertCircuitPcbCcwRotationDegreesToAltium } from "./convert-circuit-p
 import { createCircuitToAltiumPcbPointTransform } from "./create-circuit-to-altium-pcb-point-transform"
 import { createPcbCopperPourRecords } from "./create-pcb-copper-pour-records"
 import { createPcbNetEntries, type PcbNetEntry } from "./create-pcb-net-entries"
+import { createPcbSilkscreenTextRecord } from "./create-pcb-silkscreen-text-record"
 import {
   asNumber,
   asPoint,
@@ -21,7 +22,6 @@ import type {
   PcbComponentId,
   PcbPortId,
   PcbTraceId,
-  Point,
   SourceComponentId,
   SourcePortId,
   SourceTraceId,
@@ -397,35 +397,15 @@ export const createPcbDocument = (circuitJson: CircuitElement[]): string => {
     }
   }
 
-  for (const silkText of byType(circuitJson, "pcb_silkscreen_text")) {
-    const circuitAnchor =
-      asPoint(silkText.anchor_position) ??
-      asPoint(silkText.center) ??
-      ({ x: 0, y: 0 } satisfies Point)
-    const altiumPosition = circuitToAltiumPcbPoint(circuitAnchor)
-    const altiumComponentIndex = componentIndex.get(
-      asString(silkText.pcb_component_id),
-    )
-    const isBottom = asString(silkText.layer).toLowerCase() === "bottom"
-    const fontSize = asPositiveNumber(silkText.font_size, 1)
+  for (const silkscreenText of byType(circuitJson, "pcb_silkscreen_text")) {
     lines.push(
-      [
-        "|RECORD=Text",
-        ...(altiumComponentIndex === undefined
-          ? []
-          : [`COMPONENT=${altiumComponentIndex}`]),
-        `LAYER=${isBottom ? "BOTTOMOVERLAY" : "TOPOVERLAY"}`,
-        `X=${formatMil(altiumPosition.x)}`,
-        `Y=${formatMil(altiumPosition.y)}`,
-        `ROTATION=${formatNumber(convertCircuitPcbCcwRotationDegreesToAltium(asNumber(silkText.ccw_rotation)))}`,
-        `MIRROR=${isBottom ? "TRUE" : "FALSE"}`,
-        `HEIGHT=${formatMil(fontSize * MILLIMETERS_TO_MILS)}`,
-        `WIDTH=${formatMil(Math.max(0.05, fontSize * 0.1) * MILLIMETERS_TO_MILS)}`,
-        "USETTFONTS=TRUE",
-        "FONTNAME=Arial",
-        "JUSTIFICATION=4",
-        `TEXT=${sanitizeField(silkText.text)}`,
-      ].join("|"),
+      createPcbSilkscreenTextRecord({
+        altiumComponentIndex: componentIndex.get(
+          asString(silkscreenText.pcb_component_id),
+        ),
+        circuitToAltiumPcbPoint,
+        silkscreenText,
+      }),
     )
   }
 

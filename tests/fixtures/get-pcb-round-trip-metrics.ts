@@ -13,6 +13,7 @@ const preservedPrimitiveTypes = [
   "pcb_trace",
   "pcb_via",
   "pcb_copper_pour",
+  "pcb_silkscreen_text",
 ] as const
 
 const geometryElementTypes = [
@@ -22,6 +23,7 @@ const geometryElementTypes = [
   "pcb_hole",
   "pcb_trace",
   "pcb_via",
+  "pcb_silkscreen_text",
 ] as const
 
 const rotationElementTypes = [
@@ -29,6 +31,7 @@ const rotationElementTypes = [
   "pcb_smtpad",
   "pcb_plated_hole",
   "pcb_hole",
+  "pcb_silkscreen_text",
 ] as const
 
 type PreservedPrimitiveType = (typeof preservedPrimitiveTypes)[number]
@@ -45,6 +48,7 @@ export type PcbRoundTripMetrics = {
   sourceCounts: PreservedPrimitiveCounts
   sourceNetNames: string[]
   sourcePrimitiveTotal: number
+  silkscreenTextMismatchCount: number
 }
 
 function getSourceNetNames(circuitJson: CircuitElement[]): string[] {
@@ -103,8 +107,24 @@ function getGeometryPoints(
       continue
     }
     if (
+      elementType === "pcb_silkscreen_text" &&
+      typeof element.anchor_position === "object" &&
+      element.anchor_position !== null &&
+      "x" in element.anchor_position &&
+      "y" in element.anchor_position &&
+      typeof element.anchor_position.x === "number" &&
+      typeof element.anchor_position.y === "number"
+    ) {
+      points.push({
+        x: element.anchor_position.x,
+        y: element.anchor_position.y,
+      })
+      continue
+    }
+    if (
       elementType !== "pcb_component" &&
       elementType !== "pcb_trace" &&
+      elementType !== "pcb_silkscreen_text" &&
       typeof element.x === "number" &&
       typeof element.y === "number"
     ) {
@@ -112,6 +132,32 @@ function getGeometryPoints(
     }
   }
   return points
+}
+
+function getSilkscreenTextMismatchCount(
+  sourceCircuitJson: CircuitElement[],
+  roundTripCircuitJson: CircuitElement[],
+): number {
+  const sourceTexts = sourceCircuitJson.filter(
+    (element) => element.type === "pcb_silkscreen_text",
+  )
+  const roundTripTexts = roundTripCircuitJson.filter(
+    (element) => element.type === "pcb_silkscreen_text",
+  )
+  if (sourceTexts.length !== roundTripTexts.length) {
+    return Number.POSITIVE_INFINITY
+  }
+
+  return sourceTexts.reduce((mismatchCount, sourceText, index) => {
+    const roundTripText = roundTripTexts[index]
+    if (!roundTripText) return mismatchCount + 1
+    const matches =
+      sourceText.text === roundTripText.text &&
+      sourceText.anchor_alignment === roundTripText.anchor_alignment &&
+      sourceText.is_mirrored === roundTripText.is_mirrored &&
+      sourceText.layer === roundTripText.layer
+    return mismatchCount + (matches ? 0 : 1)
+  }, 0)
 }
 
 function getGeometryMaxDeltaMm(
@@ -183,15 +229,31 @@ function getRotationMismatchCount(
     }
     mismatchCount += sourceCcwRotationsDegrees.reduce(
       (typeMismatchCount, ccwRotationDegrees, index) => {
+        const roundTripCcwRotationDegrees =
+          roundTripCcwRotationsDegrees[index] ?? 0
         return (
           typeMismatchCount +
-          (ccwRotationDegrees === roundTripCcwRotationsDegrees[index] ? 0 : 1)
+          (getCircularRotationDeltaDegrees(
+            ccwRotationDegrees,
+            roundTripCcwRotationDegrees,
+          ) <= 0.0001
+            ? 0
+            : 1)
         )
       },
       0,
     )
   }
   return mismatchCount
+}
+
+function getCircularRotationDeltaDegrees(
+  firstCcwRotationDegrees: number,
+  secondCcwRotationDegrees: number,
+): number {
+  const linearDeltaDegrees =
+    Math.abs(firstCcwRotationDegrees - secondCcwRotationDegrees) % 360
+  return Math.min(linearDeltaDegrees, 360 - linearDeltaDegrees)
 }
 
 export function getPcbRoundTripMetrics({
@@ -220,6 +282,10 @@ export function getPcbRoundTripMetrics({
     sourcePrimitiveTotal: Object.values(sourceCounts).reduce(
       (sum, count) => sum + count,
       0,
+    ),
+    silkscreenTextMismatchCount: getSilkscreenTextMismatchCount(
+      sourceCircuitJson,
+      roundTripCircuitJson,
     ),
   }
 }
