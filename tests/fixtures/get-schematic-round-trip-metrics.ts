@@ -1,5 +1,9 @@
 import { asPoint, asString, isCircuitElement } from "../../lib/format"
 import type { CircuitElement, Point } from "../../lib/types"
+import {
+  getSchematicConnectivitySignature,
+  type SchematicConnectivitySignature,
+} from "./get-schematic-connectivity-signature"
 
 const preservedElementTypes = [
   "source_component",
@@ -26,10 +30,12 @@ export type SchematicRoundTripMetrics = {
   componentSizeMaxDeltaCircuitUnits: number
   geometryMaxDeltaCircuitUnits: number
   roundTripComponentNames: string[]
+  roundTripConnectivity: SchematicConnectivitySignature
   roundTripCounts: SchematicPrimitiveCounts
   roundTripNetLabelTexts: string[]
   roundTripPortNames: string[]
   sourceComponentNames: string[]
+  sourceConnectivity: SchematicConnectivitySignature
   sourceCounts: SchematicPrimitiveCounts
   sourceNetLabelTexts: string[]
   sourcePortNames: string[]
@@ -196,6 +202,8 @@ export function getSchematicRoundTripMetrics({
       elementType: "source_component",
       fieldName: "name",
     }),
+    roundTripConnectivity:
+      getSchematicConnectivitySignature(roundTripCircuitJson),
     roundTripCounts,
     roundTripNetLabelTexts: getStringFields({
       circuitJson: roundTripCircuitJson,
@@ -212,6 +220,7 @@ export function getSchematicRoundTripMetrics({
       elementType: "source_component",
       fieldName: "name",
     }),
+    sourceConnectivity: getSchematicConnectivitySignature(sourceCircuitJson),
     sourceCounts,
     sourceNetLabelTexts: getStringFields({
       circuitJson: sourceCircuitJson,

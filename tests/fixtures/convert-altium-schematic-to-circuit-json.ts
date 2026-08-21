@@ -7,6 +7,7 @@ import {
   getSchematicRecordPoints,
 } from "altiumts"
 import type { CircuitElement } from "../../lib/types"
+import { addSchematicTraceConnectivity } from "./add-schematic-trace-connectivity"
 
 const ALTIUM_UNITS_PER_CIRCUIT_UNIT = 20
 
@@ -407,5 +408,5 @@ export function convertAltiumSchematicToCircuitJson(
   }
   appendWireElements(document, elements)
   appendNetLabelElements(document, elements)
-  return elements
+  return addSchematicTraceConnectivity(elements)
 }
