@@ -1,4 +1,5 @@
 import { createAltiumSchematicNetLabelRecordFields } from "./create-altium-schematic-net-label-record-fields"
+import { createAltiumSchematicOffSheetPortRecordFields } from "./create-altium-schematic-off-sheet-port-record-fields"
 import { createAltiumSchematicSymbolRecords } from "./create-altium-schematic-symbol-records"
 import {
   asNumber,
@@ -213,6 +214,7 @@ export function createSchematicDocument({
     (element) => element.type === "schematic_port",
   )) {
     const schematicComponentId = asString(schematicPort.schematic_component_id)
+    if (!schematicComponentId) continue
     schematicPortsByComponentId.set(schematicComponentId, [
       ...(schematicPortsByComponentId.get(schematicComponentId) ?? []),
       schematicPort,
@@ -379,6 +381,28 @@ export function createSchematicDocument({
         schematicRecordContext,
       )
     }
+  }
+
+  for (const schematicPort of schematicElements.filter(
+    (element) =>
+      element.type === "schematic_port" &&
+      !asString(element.schematic_component_id),
+  )) {
+    const sourcePort = sourcePorts.get(asString(schematicPort.source_port_id))
+    const portName =
+      sanitizeField(schematicPort.display_pin_label) ||
+      sanitizeField(sourcePort?.name)
+    const circuitPortPosition = asPoint(schematicPort.center)
+    if (!portName || !circuitPortPosition) continue
+    addSchematicRecord(
+      createAltiumSchematicOffSheetPortRecordFields({
+        altiumPortPosition: circuitToAltiumSchematicPoint(circuitPortPosition),
+        hasInputArrow: schematicPort.has_input_arrow === true,
+        hasOutputArrow: schematicPort.has_output_arrow === true,
+        portName,
+      }),
+      schematicRecordContext,
+    )
   }
 
   for (const schematicTrace of schematicElements.filter(

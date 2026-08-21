@@ -1,5 +1,5 @@
 import { asPoint, asString, isCircuitElement } from "../../lib/format"
-import type { CircuitElement, Point } from "../../lib/types"
+import type { CircuitElement, Point, SourcePortId } from "../../lib/types"
 
 const preservedElementTypes = [
   "source_component",
@@ -19,8 +19,16 @@ type CircuitSize = {
 
 export type SchematicPrimitiveCounts = Record<PreservedElementType, number> & {
   junction: number
+  off_sheet_port: number
   power_port: number
   wire_segment: number
+}
+
+export type SchematicOffSheetPortSignature = {
+  facingDirection: string
+  hasInputArrow: boolean
+  hasOutputArrow: boolean
+  name: string
 }
 
 export type SchematicRoundTripMetrics = {
@@ -29,14 +37,48 @@ export type SchematicRoundTripMetrics = {
   roundTripComponentNames: string[]
   roundTripCounts: SchematicPrimitiveCounts
   roundTripNetLabelTexts: string[]
+  roundTripOffSheetPortSignatures: SchematicOffSheetPortSignature[]
   roundTripPowerPortSymbolNames: string[]
   roundTripPortNames: string[]
   sourceComponentNames: string[]
   sourceCounts: SchematicPrimitiveCounts
   sourceNetLabelTexts: string[]
+  sourceOffSheetPortSignatures: SchematicOffSheetPortSignature[]
   sourcePowerPortSymbolNames: string[]
   sourcePortNames: string[]
   sourceSupportedPrimitiveTotal: number
+}
+
+function getOffSheetPortSignatures(
+  circuitJson: CircuitElement[],
+): SchematicOffSheetPortSignature[] {
+  const sourcePortNames = new Map<SourcePortId, string>(
+    circuitJson
+      .filter((element) => element.type === "source_port")
+      .map((sourcePort) => [
+        asString(sourcePort.source_port_id),
+        asString(sourcePort.name),
+      ]),
+  )
+  return circuitJson.flatMap((schematicPort) => {
+    if (
+      schematicPort.type !== "schematic_port" ||
+      asString(schematicPort.schematic_component_id)
+    ) {
+      return []
+    }
+    return [
+      {
+        facingDirection: asString(schematicPort.facing_direction),
+        hasInputArrow: schematicPort.has_input_arrow === true,
+        hasOutputArrow: schematicPort.has_output_arrow === true,
+        name:
+          asString(schematicPort.display_pin_label) ||
+          sourcePortNames.get(asString(schematicPort.source_port_id)) ||
+          "",
+      },
+    ]
+  })
 }
 
 function getPowerPortSymbolNames(circuitJson: CircuitElement[]): string[] {
@@ -65,6 +107,7 @@ function countSchematicPrimitives(
   }
   return {
     junction: junctionCount,
+    off_sheet_port: getOffSheetPortSignatures(circuitJson).length,
     power_port: getPowerPortSymbolNames(circuitJson).length,
     schematic_component: getElementCount("schematic_component"),
     schematic_net_label: getElementCount("schematic_net_label"),
@@ -216,6 +259,8 @@ export function getSchematicRoundTripMetrics({
       elementType: "schematic_net_label",
       fieldName: "text",
     }),
+    roundTripOffSheetPortSignatures:
+      getOffSheetPortSignatures(roundTripCircuitJson),
     roundTripPowerPortSymbolNames:
       getPowerPortSymbolNames(roundTripCircuitJson),
     roundTripPortNames: getStringFields({
@@ -234,6 +279,7 @@ export function getSchematicRoundTripMetrics({
       elementType: "schematic_net_label",
       fieldName: "text",
     }),
+    sourceOffSheetPortSignatures: getOffSheetPortSignatures(sourceCircuitJson),
     sourcePowerPortSymbolNames: getPowerPortSymbolNames(sourceCircuitJson),
     sourcePortNames: getStringFields({
       circuitJson: sourceCircuitJson,
