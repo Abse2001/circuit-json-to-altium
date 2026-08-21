@@ -8,13 +8,15 @@ import {
   getSchematicRecordPoints,
 } from "altiumts"
 import type { CircuitElement, SourceNetId } from "../../lib/types"
-
-const ALTIUM_UNITS_PER_CIRCUIT_UNIT = 20
-
-type CircuitPoint = {
-  x: number
-  y: number
-}
+import {
+  type CircuitPoint,
+  getRecordCorner,
+  getRecordLocation,
+  getSchematicCoordinate,
+  toCircuitLength,
+  toCircuitPoint,
+} from "./altium-schematic-coordinate-utils"
+import { appendAltiumSchematicSheetAnnotationElements } from "./append-altium-schematic-sheet-annotation-elements"
 
 type AltiumBounds = {
   maxX: number
@@ -55,50 +57,6 @@ const PIN_FACING_DIRECTION_BY_ORIENTATION = [
   "left",
   "down",
 ] as const
-
-function getSchematicCoordinate({
-  fallback = 0,
-  key,
-  record,
-}: {
-  fallback?: number
-  key: string
-  record: AltiumRecord
-}): number {
-  const integer = Number(record.getCaseInsensitive(key) ?? fallback)
-  const fraction = record.getCaseInsensitive(`${key}_FRAC`)
-  if (!Number.isFinite(integer) || fraction === undefined) {
-    return Number.isFinite(integer) ? integer : fallback
-  }
-  const fractionValue = Number(`0.${fraction.replace(/^[+-]/u, "")}`)
-  if (!Number.isFinite(fractionValue)) return integer
-  return integer < 0 ? integer - fractionValue : integer + fractionValue
-}
-
-function toCircuitPoint(point: AltiumPoint): CircuitPoint {
-  return {
-    x: point.x / ALTIUM_UNITS_PER_CIRCUIT_UNIT,
-    y: point.y / ALTIUM_UNITS_PER_CIRCUIT_UNIT,
-  }
-}
-
-function toCircuitLength(altiumLength: number): number {
-  return altiumLength / ALTIUM_UNITS_PER_CIRCUIT_UNIT
-}
-
-function getRecordLocation(record: AltiumRecord): AltiumPoint {
-  return {
-    x: getSchematicCoordinate({ key: "LOCATION.X", record }),
-    y: getSchematicCoordinate({ key: "LOCATION.Y", record }),
-  }
-}
-
-function getRecordCorner(record: AltiumRecord): AltiumPoint {
-  return {
-    x: getSchematicCoordinate({ key: "CORNER.X", record }),
-    y: getSchematicCoordinate({ key: "CORNER.Y", record }),
-  }
-}
 
 function getGraphicRecordPoints(record: AltiumRecord): AltiumPoint[] {
   if (record.recordKind === "6" || record.recordKind === "7") {
@@ -525,5 +483,6 @@ export function convertAltiumSchematicToCircuitJson(
   appendOffSheetPortElements(document, elements)
   appendWireElements(document, elements)
   appendNetLabelElements(document, elements)
+  appendAltiumSchematicSheetAnnotationElements(document, elements)
   return elements
 }

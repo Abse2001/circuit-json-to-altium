@@ -1,0 +1,277 @@
+import {
+  type AltiumRecord,
+  type AltiumSchDoc,
+  altiumColorToRgb,
+  getSchematicRecordPoints,
+} from "altiumts"
+import type { CircuitElement } from "../../lib/types"
+import {
+  getRecordCorner,
+  getRecordLocation,
+  toCircuitLength,
+  toCircuitPoint,
+} from "./altium-schematic-coordinate-utils"
+import {
+  getAltiumSchematicFont,
+  getAltiumSchematicTextFrameLines,
+  type SchematicTextAnchor,
+} from "./get-altium-schematic-text-frame-lines"
+
+const ANNOTATION_RECORD_KINDS = new Set(["4", "6", "7", "10", "14", "28"])
+
+const SCHEMATIC_TEXT_ANCHORS: SchematicTextAnchor[][] = [
+  ["bottom_left", "bottom_center", "bottom_right"],
+  ["center_left", "center", "center_right"],
+  ["top_left", "top_center", "top_right"],
+]
+
+function getCssColor({
+  fallbackCssColor,
+  fieldNames,
+  record,
+}: {
+  fallbackCssColor: string
+  fieldNames: string[]
+  record: AltiumRecord
+}): string {
+  const altiumColor = fieldNames.reduce<number | undefined>(
+    (resolvedColor, fieldName) => resolvedColor ?? record.getNumber(fieldName),
+    undefined,
+  )
+  if (altiumColor === undefined) return fallbackCssColor
+  const { blue, green, red } = altiumColorToRgb(altiumColor)
+  return `#${[red, green, blue]
+    .map((channel) => channel.toString(16).padStart(2, "0"))
+    .join("")}`
+}
+
+function getSchematicTextAnchor(record: AltiumRecord): SchematicTextAnchor {
+  const justification = Math.min(
+    Math.max(Math.round(record.getNumber("JUSTIFICATION") ?? 0), 0),
+    8,
+  )
+  const orientation =
+    ((Math.round(record.getNumber("ORIENTATION") ?? 0) % 4) + 4) % 4
+  const rowIndex = Math.floor(justification / 3)
+  const originalColumnIndex = justification % 3
+  const columnIndex =
+    orientation === 2 || orientation === 3
+      ? 2 - originalColumnIndex
+      : originalColumnIndex
+  return SCHEMATIC_TEXT_ANCHORS[rowIndex]?.[columnIndex] ?? "bottom_left"
+}
+
+function getSchematicTextRotationDegrees(record: AltiumRecord): number {
+  const orientation =
+    ((Math.round(record.getNumber("ORIENTATION") ?? 0) % 4) + 4) % 4
+  return orientation === 1 || orientation === 3 ? -90 : 0
+}
+
+function appendLabelAnnotation({
+  annotationIndex,
+  document,
+  elements,
+  record,
+}: {
+  annotationIndex: number
+  document: AltiumSchDoc
+  elements: CircuitElement[]
+  record: AltiumRecord
+}): void {
+  const text = record.getDecoded("TEXT") ?? ""
+  if (!text || record.getBoolean("ISHIDDEN") === true) return
+  const font = getAltiumSchematicFont({
+    document,
+    fallbackSizePoints: 9,
+    record,
+  })
+  elements.push({
+    type: "schematic_text",
+    schematic_text_id: `schematic_text_label_${annotationIndex}`,
+    text,
+    font_size: toCircuitLength(font.sizePoints),
+    position: toCircuitPoint(getRecordLocation(record)),
+    rotation: getSchematicTextRotationDegrees(record),
+    anchor: getSchematicTextAnchor(record),
+    color: getCssColor({
+      fallbackCssColor: "#1f2937",
+      fieldNames: ["COLOR"],
+      record,
+    }),
+  })
+}
+
+function appendPathAnnotation({
+  annotationIndex,
+  elements,
+  record,
+}: {
+  annotationIndex: number
+  elements: CircuitElement[]
+  record: AltiumRecord
+}): void {
+  const points = getSchematicRecordPoints(record).map(toCircuitPoint)
+  if (points.length < 2) return
+  const isFilled = record.recordKind === "7"
+  elements.push({
+    type: "schematic_path",
+    schematic_path_id: `schematic_path_${annotationIndex}`,
+    points,
+    stroke_width: toCircuitLength(record.getNumber("LINEWIDTH") ?? 1),
+    stroke_color: getCssColor({
+      fallbackCssColor: "#1f2937",
+      fieldNames: ["COLOR"],
+      record,
+    }),
+    is_filled: isFilled,
+    ...(isFilled
+      ? {
+          fill_color: getCssColor({
+            fallbackCssColor: "#ffffff",
+            fieldNames: ["AREACOLOR"],
+            record,
+          }),
+        }
+      : {}),
+    is_dashed: false,
+  })
+}
+
+function appendRectAnnotation({
+  annotationIndex,
+  elements,
+  record,
+}: {
+  annotationIndex: number
+  elements: CircuitElement[]
+  record: AltiumRecord
+}): void {
+  const location = getRecordLocation(record)
+  const corner = getRecordCorner(record)
+  const isFilled = record.getBoolean("ISSOLID") === true
+  elements.push({
+    type: "schematic_rect",
+    schematic_rect_id: `schematic_rect_${annotationIndex}`,
+    center: toCircuitPoint({
+      x: (location.x + corner.x) / 2,
+      y: (location.y + corner.y) / 2,
+    }),
+    width: toCircuitLength(Math.abs(corner.x - location.x)),
+    height: toCircuitLength(Math.abs(corner.y - location.y)),
+    rotation: 0,
+    stroke_width: toCircuitLength(record.getNumber("LINEWIDTH") ?? 1),
+    color: getCssColor({
+      fallbackCssColor: "#1f2937",
+      fieldNames: ["COLOR"],
+      record,
+    }),
+    is_filled: isFilled,
+    ...(isFilled
+      ? {
+          fill_color: getCssColor({
+            fallbackCssColor: "#ffffff",
+            fieldNames: ["AREACOLOR"],
+            record,
+          }),
+        }
+      : {}),
+    is_dashed: false,
+  })
+}
+
+function appendTextFrameAnnotations({
+  annotationIndex,
+  document,
+  elements,
+  record,
+}: {
+  annotationIndex: number
+  document: AltiumSchDoc
+  elements: CircuitElement[]
+  record: AltiumRecord
+}): void {
+  const location = getRecordLocation(record)
+  const corner = getRecordCorner(record)
+  const minX = Math.min(location.x, corner.x)
+  const maxX = Math.max(location.x, corner.x)
+  const minY = Math.min(location.y, corner.y)
+  const maxY = Math.max(location.y, corner.y)
+  const isFilled = record.getBoolean("ISSOLID") === true
+  const showsBorder = record.getBoolean("SHOWBORDER") === true
+  if (isFilled || showsBorder) {
+    const fillColor = getCssColor({
+      fallbackCssColor: "#ffffff",
+      fieldNames: ["AREACOLOR"],
+      record,
+    })
+    elements.push({
+      type: "schematic_rect",
+      schematic_rect_id: `schematic_rect_text_frame_${annotationIndex}`,
+      center: toCircuitPoint({
+        x: (minX + maxX) / 2,
+        y: (minY + maxY) / 2,
+      }),
+      width: toCircuitLength(maxX - minX),
+      height: toCircuitLength(maxY - minY),
+      rotation: 0,
+      stroke_width: toCircuitLength(1),
+      color: showsBorder
+        ? getCssColor({
+            fallbackCssColor: "#1f2937",
+            fieldNames: ["COLOR"],
+            record,
+          })
+        : fillColor,
+      is_filled: isFilled,
+      ...(isFilled ? { fill_color: fillColor } : {}),
+      is_dashed: false,
+    })
+  }
+
+  const color = getCssColor({
+    fallbackCssColor: "#1f2937",
+    fieldNames: ["TEXTCOLOR", "COLOR"],
+    record,
+  })
+  const lines = getAltiumSchematicTextFrameLines({ document, record })
+  for (const [lineIndex, line] of lines.entries()) {
+    elements.push({
+      type: "schematic_text",
+      schematic_text_id: `schematic_text_frame_${annotationIndex}_${lineIndex}`,
+      text: line.text,
+      font_size: toCircuitLength(line.fontSizePoints),
+      position: toCircuitPoint(line.position),
+      rotation: 0,
+      anchor: line.anchor,
+      color,
+    })
+  }
+}
+
+export function appendAltiumSchematicSheetAnnotationElements(
+  document: AltiumSchDoc,
+  elements: CircuitElement[],
+): void {
+  for (const [annotationIndex, record] of document.records.entries()) {
+    if (
+      !ANNOTATION_RECORD_KINDS.has(record.recordKind ?? "") ||
+      document.getParent(record) !== undefined
+    ) {
+      continue
+    }
+    if (record.recordKind === "4") {
+      appendLabelAnnotation({ annotationIndex, document, elements, record })
+    } else if (record.recordKind === "6" || record.recordKind === "7") {
+      appendPathAnnotation({ annotationIndex, elements, record })
+    } else if (record.recordKind === "10" || record.recordKind === "14") {
+      appendRectAnnotation({ annotationIndex, elements, record })
+    } else if (record.recordKind === "28") {
+      appendTextFrameAnnotations({
+        annotationIndex,
+        document,
+        elements,
+        record,
+      })
+    }
+  }
+}

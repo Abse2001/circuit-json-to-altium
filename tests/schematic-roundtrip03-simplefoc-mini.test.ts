@@ -12,6 +12,9 @@ test("round-trips the open-source SimpleFOC Mini Altium schematic", async () => 
   expect(result.roundTripComponentNames).toEqual(result.sourceComponentNames)
   expect(result.roundTripPortNames).toEqual(result.sourcePortNames)
   expect(result.roundTripNetLabelTexts).toEqual(result.sourceNetLabelTexts)
+  expect(result.roundTripAnnotationSignatures).toEqual(
+    result.sourceAnnotationSignatures,
+  )
   expect(result.roundTripOffSheetPortSignatures).toEqual(
     result.sourceOffSheetPortSignatures,
   )
@@ -28,6 +31,11 @@ test("round-trips the open-source SimpleFOC Mini Altium schematic", async () => 
     new Set([11]),
   )
   expect(result.sourceCounts.power_port).toBe(15)
+  expect({
+    path: result.sourceCounts.schematic_path,
+    rect: result.sourceCounts.schematic_rect,
+    text: result.sourceCounts.schematic_text,
+  }).toEqual({ path: 0, rect: 0, text: 0 })
   expect(result.sourceSupportedPrimitiveTotal).toBeGreaterThan(100)
   await expect(
     createSideBySideSvg(result.sourceSvg, result.roundTripSvg),
