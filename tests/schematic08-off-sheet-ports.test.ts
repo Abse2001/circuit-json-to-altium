@@ -63,7 +63,21 @@ const elements: CircuitElement[] = [
 test("writes componentless schematic ports as native off-sheet ports", async () => {
   const { schematics } = await extractArchive(elements)
   const schematic = schematics[0] as AltiumSchDoc
+  const sheetRecord = schematic.getRecordsByKind("31")[0]
 
+  expect({
+    fontIdCount: sheetRecord?.getNumber("FONTIDCOUNT"),
+    portFontIds: [
+      ...new Set(schematic.ports.map((port) => port.getNumber("FONTID"))),
+    ],
+    portFontName: sheetRecord?.getDecoded("FONTNAME3"),
+    portFontSizePoints: sheetRecord?.getNumber("SIZE3"),
+  }).toEqual({
+    fontIdCount: 3,
+    portFontIds: [3],
+    portFontName: "Times New Roman",
+    portFontSizePoints: 11,
+  })
   expect(
     schematic.ports.map((port) => ({
       ioType: port.getNumber("IOTYPE"),

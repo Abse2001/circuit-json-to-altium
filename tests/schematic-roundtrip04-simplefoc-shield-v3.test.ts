@@ -15,12 +15,18 @@ test("round-trips the open-source SimpleFOC Shield V3 Altium schematic", async (
   expect(result.roundTripOffSheetPortSignatures).toEqual(
     result.sourceOffSheetPortSignatures,
   )
+  expect(result.roundTripOffSheetPortFontSizePoints).toEqual(
+    result.sourceOffSheetPortFontSizePoints,
+  )
   expect(result.roundTripPowerPortSymbolNames).toEqual(
     result.sourcePowerPortSymbolNames,
   )
   expect(result.geometryMaxDeltaCircuitUnits).toBeLessThan(0.06)
   expect(result.componentSizeMaxDeltaCircuitUnits).toBeLessThan(0.06)
   expect(result.sourceCounts.off_sheet_port).toBe(91)
+  expect(new Set(result.sourceOffSheetPortFontSizePoints)).toEqual(
+    new Set([11]),
+  )
   expect(result.sourceCounts.power_port).toBe(26)
   expect(result.sourceSupportedPrimitiveTotal).toBeGreaterThan(350)
   await expect(

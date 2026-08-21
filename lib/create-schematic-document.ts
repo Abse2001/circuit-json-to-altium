@@ -1,5 +1,10 @@
 import { createAltiumSchematicNetLabelRecordFields } from "./create-altium-schematic-net-label-record-fields"
-import { createAltiumSchematicOffSheetPortRecordFields } from "./create-altium-schematic-off-sheet-port-record-fields"
+import {
+  ALTIUM_SCHEMATIC_OFF_SHEET_PORT_FONT_ID,
+  ALTIUM_SCHEMATIC_OFF_SHEET_PORT_FONT_NAME,
+  ALTIUM_SCHEMATIC_OFF_SHEET_PORT_FONT_SIZE_POINTS,
+  createAltiumSchematicOffSheetPortRecordFields,
+} from "./create-altium-schematic-off-sheet-port-record-fields"
 import { createAltiumSchematicSymbolRecords } from "./create-altium-schematic-symbol-records"
 import {
   asNumber,
@@ -61,7 +66,7 @@ type FallbackSchematicBoxBoundsParams = {
   circuitToAltiumSchematicPoint: PointTransform
 }
 
-const ALTIUM_SCHEMATIC_COMPONENT_FONT_SIZE = 4
+const ALTIUM_SCHEMATIC_COMPONENT_FONT_SIZE_POINTS = 4
 const ALTIUM_PIN_STANDARD_FLAGS = 0x20
 const ALTIUM_PIN_NAME_VISIBLE_FLAG = 0x08
 const ALTIUM_PIN_DESIGNATOR_VISIBLE_FLAG = 0x10
@@ -181,11 +186,13 @@ export function createSchematicDocument({
   addSchematicRecord(
     [
       "RECORD=31",
-      "FONTIDCOUNT=2",
-      `SIZE1=${ALTIUM_SCHEMATIC_COMPONENT_FONT_SIZE}`,
+      `FONTIDCOUNT=${ALTIUM_SCHEMATIC_OFF_SHEET_PORT_FONT_ID}`,
+      `SIZE1=${ALTIUM_SCHEMATIC_COMPONENT_FONT_SIZE_POINTS}`,
       "FONTNAME1=Arial",
-      `SIZE2=${ALTIUM_SCHEMATIC_COMPONENT_FONT_SIZE}`,
+      `SIZE2=${ALTIUM_SCHEMATIC_COMPONENT_FONT_SIZE_POINTS}`,
       "FONTNAME2=Arial",
+      `SIZE${ALTIUM_SCHEMATIC_OFF_SHEET_PORT_FONT_ID}=${ALTIUM_SCHEMATIC_OFF_SHEET_PORT_FONT_SIZE_POINTS}`,
+      `FONTNAME${ALTIUM_SCHEMATIC_OFF_SHEET_PORT_FONT_ID}=${ALTIUM_SCHEMATIC_OFF_SHEET_PORT_FONT_NAME}`,
       `CUSTOMX=${altiumSheetWidth}`,
       `CUSTOMY=${altiumSheetHeight}`,
       "USECUSTOMSHEET=T",

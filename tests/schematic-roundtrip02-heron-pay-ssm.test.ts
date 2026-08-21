@@ -15,6 +15,9 @@ test("round-trips the open-source HERON PAY-SSM Altium schematic", async () => {
   expect(result.roundTripOffSheetPortSignatures).toEqual(
     result.sourceOffSheetPortSignatures,
   )
+  expect(result.roundTripOffSheetPortFontSizePoints).toEqual(
+    result.sourceOffSheetPortFontSizePoints,
+  )
   expect(result.roundTripPowerPortSymbolNames).toEqual(
     result.sourcePowerPortSymbolNames,
   )

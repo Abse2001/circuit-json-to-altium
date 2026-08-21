@@ -11,13 +11,28 @@ import { getSchematicRoundTripMetrics } from "./get-schematic-round-trip-metrics
 export type OpenSourceSchematicRoundTrip = ReturnType<
   typeof getSchematicRoundTripMetrics
 > & {
+  roundTripOffSheetPortFontSizePoints: number[]
   roundTripSvg: string
+  sourceOffSheetPortFontSizePoints: number[]
   sourceSvg: string
 }
 
 type OpenSourceSchematicRoundTripOptions = {
   filename: string
   projectName: string
+}
+
+const ALTIUM_SCHEMATIC_PORT_FALLBACK_FONT_SIZE_POINTS = 8
+
+function getOffSheetPortFontSizePoints(document: AltiumSchDoc): number[] {
+  const sheetRecord = document.getRecordsByKind("31")[0]
+  return document.ports.map((port) => {
+    const fontId = Math.max(Math.round(port.getNumber("FONTID") ?? 1), 1)
+    return (
+      sheetRecord?.getNumber(`SIZE${fontId}`) ??
+      ALTIUM_SCHEMATIC_PORT_FALLBACK_FONT_SIZE_POINTS
+    )
+  })
 }
 
 function parseSchematicDocument(schematicBytes: Uint8Array): AltiumSchDoc {
@@ -61,7 +76,11 @@ export async function createOpenSourceSchematicRoundTrip({
       roundTripCircuitJson,
       sourceCircuitJson,
     }),
+    roundTripOffSheetPortFontSizePoints:
+      getOffSheetPortFontSizePoints(roundTripDocument),
     roundTripSvg: serializeAltiumSheetToSvg(roundTripDocument),
+    sourceOffSheetPortFontSizePoints:
+      getOffSheetPortFontSizePoints(sourceDocument),
     sourceSvg: serializeAltiumSheetToSvg(sourceDocument),
   }
 }

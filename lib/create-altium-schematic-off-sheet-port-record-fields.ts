@@ -12,6 +12,10 @@ const ALTIUM_SCHEMATIC_PORT_COLOR = 16711680
 const ALTIUM_SCHEMATIC_PORT_MINIMUM_WIDTH = 16
 const ALTIUM_SCHEMATIC_PORT_TEXT_CHARACTER_WIDTH = 8
 
+export const ALTIUM_SCHEMATIC_OFF_SHEET_PORT_FONT_ID = 3
+export const ALTIUM_SCHEMATIC_OFF_SHEET_PORT_FONT_NAME = "Times New Roman"
+export const ALTIUM_SCHEMATIC_OFF_SHEET_PORT_FONT_SIZE_POINTS = 11
+
 function getAltiumSchematicPortIoType({
   hasInputArrow,
   hasOutputArrow,
@@ -42,6 +46,7 @@ export function createAltiumSchematicOffSheetPortRecordFields({
     `WIDTH=${altiumPortWidth}`,
     `IOTYPE=${getAltiumSchematicPortIoType({ hasInputArrow, hasOutputArrow })}`,
     `NAME=${portName}`,
+    `FONTID=${ALTIUM_SCHEMATIC_OFF_SHEET_PORT_FONT_ID}`,
     `COLOR=${ALTIUM_SCHEMATIC_PORT_COLOR}`,
     `AREACOLOR=${ALTIUM_SCHEMATIC_PORT_AREA_COLOR}`,
     `TEXTCOLOR=${ALTIUM_SCHEMATIC_PORT_COLOR}`,
