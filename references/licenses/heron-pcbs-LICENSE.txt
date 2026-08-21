@@ -1,4 +1,0 @@
-Copyright (c) 2021 University of Toronto Aerospace Team (UTAT)
-
-These designs are provided under the CERN-OHL-P license
-https://cern-ohl.web.cern.ch/home

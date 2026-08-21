@@ -8,13 +8,12 @@
   "files": ["lib"],
   "trustedDependencies": ["altiumts"],
   "scripts": {
-    "check": "bun run format:check && bun run typecheck && bun run verify-open-source-references && bun test",
+    "check": "bun run format:check && bun run typecheck && bun test",
+    "download-references": "bun run scripts/download-references.ts",
     "format": "biome check --write .",
     "format:check": "biome check .",
     "test": "bun test",
-    "typecheck": "bunx tsc --noEmit",
-    "verify-open-source-boards": "bun run scripts/verify-open-source-references.ts",
-    "verify-open-source-references": "bun run scripts/verify-open-source-references.ts"
+    "typecheck": "bunx tsc --noEmit"
   },
   "repository": {
     "type": "git",
