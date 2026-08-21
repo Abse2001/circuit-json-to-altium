@@ -426,6 +426,36 @@ function appendWireElements(
   }
 }
 
+function appendOffSheetPortElements(
+  document: AltiumSchDoc,
+  elements: CircuitElement[],
+): void {
+  for (const [portIndex, port] of document.ports.entries()) {
+    const portName = port.name ?? ""
+    if (!portName) continue
+    const ioType = port.getNumber("IOTYPE") ?? 0
+    const sourcePortId = `source_port_off_sheet_${portIndex}`
+    elements.push(
+      {
+        type: "source_port",
+        source_port_id: sourcePortId,
+        name: portName,
+      },
+      {
+        type: "schematic_port",
+        schematic_port_id: `schematic_port_off_sheet_${portIndex}`,
+        source_port_id: sourcePortId,
+        center: toCircuitPoint(port.position ?? { x: 0, y: 0 }),
+        display_pin_label: portName,
+        facing_direction: ioType === 1 ? "left" : "right",
+        is_internal_circuit_port: true,
+        ...(ioType === 1 || ioType === 3 ? { has_input_arrow: true } : {}),
+        ...(ioType === 2 || ioType === 3 ? { has_output_arrow: true } : {}),
+      },
+    )
+  }
+}
+
 function appendNetLabelElements(
   document: AltiumSchDoc,
   elements: CircuitElement[],
@@ -492,6 +522,7 @@ export function convertAltiumSchematicToCircuitJson(
       elements,
     })
   }
+  appendOffSheetPortElements(document, elements)
   appendWireElements(document, elements)
   appendNetLabelElements(document, elements)
   return elements
