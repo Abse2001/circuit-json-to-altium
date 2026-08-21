@@ -19,6 +19,7 @@ type CircuitSize = {
 
 export type SchematicPrimitiveCounts = Record<PreservedElementType, number> & {
   junction: number
+  power_port: number
   wire_segment: number
 }
 
@@ -28,12 +29,24 @@ export type SchematicRoundTripMetrics = {
   roundTripComponentNames: string[]
   roundTripCounts: SchematicPrimitiveCounts
   roundTripNetLabelTexts: string[]
+  roundTripPowerPortSymbolNames: string[]
   roundTripPortNames: string[]
   sourceComponentNames: string[]
   sourceCounts: SchematicPrimitiveCounts
   sourceNetLabelTexts: string[]
+  sourcePowerPortSymbolNames: string[]
   sourcePortNames: string[]
   sourceSupportedPrimitiveTotal: number
+}
+
+function getPowerPortSymbolNames(circuitJson: CircuitElement[]): string[] {
+  return circuitJson.flatMap((element) => {
+    if (element.type !== "schematic_net_label") return []
+    const symbolName = asString(element.symbol_name)
+    return symbolName.startsWith("rail_") || symbolName.startsWith("ground_")
+      ? [symbolName]
+      : []
+  })
 }
 
 function countSchematicPrimitives(
@@ -52,6 +65,7 @@ function countSchematicPrimitives(
   }
   return {
     junction: junctionCount,
+    power_port: getPowerPortSymbolNames(circuitJson).length,
     schematic_component: getElementCount("schematic_component"),
     schematic_net_label: getElementCount("schematic_net_label"),
     schematic_port: getElementCount("schematic_port"),
@@ -202,6 +216,8 @@ export function getSchematicRoundTripMetrics({
       elementType: "schematic_net_label",
       fieldName: "text",
     }),
+    roundTripPowerPortSymbolNames:
+      getPowerPortSymbolNames(roundTripCircuitJson),
     roundTripPortNames: getStringFields({
       circuitJson: roundTripCircuitJson,
       elementType: "source_port",
@@ -218,6 +234,7 @@ export function getSchematicRoundTripMetrics({
       elementType: "schematic_net_label",
       fieldName: "text",
     }),
+    sourcePowerPortSymbolNames: getPowerPortSymbolNames(sourceCircuitJson),
     sourcePortNames: getStringFields({
       circuitJson: sourceCircuitJson,
       elementType: "source_port",

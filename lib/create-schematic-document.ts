@@ -1,3 +1,4 @@
+import { createAltiumSchematicNetLabelRecordFields } from "./create-altium-schematic-net-label-record-fields"
 import { createAltiumSchematicSymbolRecords } from "./create-altium-schematic-symbol-records"
 import {
   asNumber,
@@ -442,15 +443,11 @@ export function createSchematicDocument({
         asPoint(schematicNetLabel.center) ?? { x: 0, y: 0 },
     )
     addSchematicRecord(
-      [
-        "RECORD=25",
-        `LOCATION.X=${altiumLabelPosition.x}`,
-        `LOCATION.Y=${altiumLabelPosition.y}`,
-        "FONTID=2",
-        "ORIENTATION=0",
-        "JUSTIFICATION=0",
-        `TEXT=${labelText}`,
-      ],
+      createAltiumSchematicNetLabelRecordFields({
+        altiumLabelPosition,
+        labelText,
+        symbolName: asString(schematicNetLabel.symbol_name),
+      }),
       schematicRecordContext,
     )
   }
