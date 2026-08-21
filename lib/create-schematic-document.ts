@@ -1,5 +1,6 @@
 import { createAltiumSchematicFontTable } from "./create-altium-schematic-font-table"
 import { createAltiumSchematicNetLabelRecordFields } from "./create-altium-schematic-net-label-record-fields"
+import { createAltiumSchematicNoConnectRecordFields } from "./create-altium-schematic-no-connect-record-fields"
 import { createAltiumSchematicOffSheetPortRecordFields } from "./create-altium-schematic-off-sheet-port-record-fields"
 import { createAltiumSchematicSheetAnnotationRecordFields } from "./create-altium-schematic-sheet-annotation-record-fields"
 import { createAltiumSchematicSymbolRecords } from "./create-altium-schematic-symbol-records"
@@ -471,6 +472,21 @@ export function createSchematicDocument({
         altiumLabelPosition,
         labelText,
         symbolName: asString(schematicNetLabel.symbol_name),
+      }),
+      schematicRecordContext,
+    )
+  }
+
+  for (const schematicNoConnect of schematicElements.filter(
+    (element) => element.type === "schematic_no_connect",
+  )) {
+    const circuitNoConnectPosition = asPoint(schematicNoConnect.center)
+    if (!circuitNoConnectPosition) continue
+    addSchematicRecord(
+      createAltiumSchematicNoConnectRecordFields({
+        altiumNoConnectPosition: circuitToAltiumSchematicPoint(
+          circuitNoConnectPosition,
+        ),
       }),
       schematicRecordContext,
     )
