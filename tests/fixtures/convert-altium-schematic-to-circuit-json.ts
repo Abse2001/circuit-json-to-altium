@@ -4,9 +4,10 @@ import {
   type AltiumSchComponentRecord,
   type AltiumSchDoc,
   AltiumSchPinRecord,
+  type AltiumSchPowerPortRecord,
   getSchematicRecordPoints,
 } from "altiumts"
-import type { CircuitElement } from "../../lib/types"
+import type { CircuitElement, SourceNetId } from "../../lib/types"
 
 const ALTIUM_UNITS_PER_CIRCUIT_UNIT = 20
 
@@ -20,6 +21,32 @@ type AltiumBounds = {
   maxY: number
   minX: number
   minY: number
+}
+
+type AltiumPowerPortDirection = "down" | "left" | "right" | "up"
+type SchematicNetLabelAnchorSide = "bottom" | "left" | "right" | "top"
+type SourceNetName = string
+
+type SchematicNetContext = {
+  elements: CircuitElement[]
+  sourceNetIdByName: Map<SourceNetName, SourceNetId>
+}
+
+const ALTIUM_POWER_PORT_DIRECTION_BY_ORIENTATION_INDEX = [
+  "right",
+  "up",
+  "left",
+  "down",
+] as const
+
+const SCHEMATIC_NET_LABEL_ANCHOR_SIDE_BY_POWER_PORT_DIRECTION: Record<
+  AltiumPowerPortDirection,
+  SchematicNetLabelAnchorSide
+> = {
+  right: "left",
+  up: "bottom",
+  left: "right",
+  down: "top",
 }
 
 const PIN_FACING_DIRECTION_BY_ORIENTATION = [
@@ -221,6 +248,46 @@ function getNumericPinNumber(
   return Number.isSafeInteger(pinNumber) ? pinNumber : undefined
 }
 
+function getPowerPortDirection(
+  powerPort: AltiumSchPowerPortRecord,
+): AltiumPowerPortDirection {
+  const orientationIndex = powerPort.getNumber("ORIENTATION") ?? 0
+  const normalizedOrientationIndex =
+    ((Math.round(orientationIndex) % 4) + 4) % 4
+  return (
+    ALTIUM_POWER_PORT_DIRECTION_BY_ORIENTATION_INDEX[
+      normalizedOrientationIndex
+    ] ?? "right"
+  )
+}
+
+function getPowerPortSymbolName(
+  powerPort: AltiumSchPowerPortRecord,
+): string | undefined {
+  const styleIndex = powerPort.getNumber("STYLE") ?? 2
+  const symbolFamily =
+    styleIndex === 2 ? "rail" : styleIndex === 4 ? "ground" : undefined
+  if (!symbolFamily) return undefined
+  return `${symbolFamily}_${getPowerPortDirection(powerPort)}`
+}
+
+function getOrCreateSourceNetId(
+  { sourceNetName }: { sourceNetName: SourceNetName },
+  context: SchematicNetContext,
+): SourceNetId {
+  const existingSourceNetId = context.sourceNetIdByName.get(sourceNetName)
+  if (existingSourceNetId) return existingSourceNetId
+  const sourceNetId = `source_net_${context.sourceNetIdByName.size}`
+  context.sourceNetIdByName.set(sourceNetName, sourceNetId)
+  context.elements.push({
+    type: "source_net",
+    source_net_id: sourceNetId,
+    name: sourceNetName,
+    member_source_group_ids: [],
+  })
+  return sourceNetId
+}
+
 function appendComponentElements({
   component,
   componentIndex,
@@ -363,23 +430,18 @@ function appendNetLabelElements(
   document: AltiumSchDoc,
   elements: CircuitElement[],
 ): void {
-  const sourceNets: Array<{ id: string; name: string }> = []
+  const schematicNetContext: SchematicNetContext = {
+    elements,
+    sourceNetIdByName: new Map<SourceNetName, SourceNetId>(),
+  }
+
   for (const [labelIndex, label] of document.netLabels.entries()) {
     const text = label.text ?? ""
     if (!text) continue
-    let sourceNetId = sourceNets.find(
-      (sourceNet) => sourceNet.name === text,
-    )?.id
-    if (!sourceNetId) {
-      sourceNetId = `source_net_${sourceNets.length}`
-      sourceNets.push({ id: sourceNetId, name: text })
-      elements.push({
-        type: "source_net",
-        source_net_id: sourceNetId,
-        name: text,
-        member_source_group_ids: [],
-      })
-    }
+    const sourceNetId = getOrCreateSourceNetId(
+      { sourceNetName: text },
+      schematicNetContext,
+    )
     const position = toCircuitPoint(label.position ?? { x: 0, y: 0 })
     elements.push({
       type: "schematic_net_label",
@@ -389,6 +451,31 @@ function appendNetLabelElements(
       anchor_position: position,
       anchor_side: "left",
       text,
+    })
+  }
+
+  for (const [powerPortIndex, powerPort] of document.powerPorts.entries()) {
+    const text = powerPort.text ?? ""
+    if (!text) continue
+    const sourceNetId = getOrCreateSourceNetId(
+      { sourceNetName: text },
+      schematicNetContext,
+    )
+    const position = toCircuitPoint(powerPort.position ?? { x: 0, y: 0 })
+    const powerPortDirection = getPowerPortDirection(powerPort)
+    const symbolName = getPowerPortSymbolName(powerPort)
+    elements.push({
+      type: "schematic_net_label",
+      schematic_net_label_id: `schematic_net_label_power_port_${powerPortIndex}`,
+      source_net_id: sourceNetId,
+      center: position,
+      anchor_position: position,
+      anchor_side:
+        SCHEMATIC_NET_LABEL_ANCHOR_SIDE_BY_POWER_PORT_DIRECTION[
+          powerPortDirection
+        ],
+      text,
+      ...(symbolName ? { symbol_name: symbolName } : {}),
     })
   }
 }
