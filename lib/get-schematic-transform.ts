@@ -1,6 +1,7 @@
 import type { Matrix } from "transformation-matrix"
 import { applyToPoint, compose, scale, translate } from "transformation-matrix"
-import { asPoint, isCircuitElement } from "./format"
+import { asNumber, asPoint, isCircuitElement } from "./format"
+import { isSchematicSheetAnnotation } from "./is-schematic-sheet-annotation"
 import type { CircuitElement, Point, PointTransform } from "./types"
 
 type SchematicTransform = {
@@ -26,6 +27,29 @@ export function getSchematicTransform(
     if (center) circuitPoints.push(center)
     const anchor = asPoint(element.anchor_position)
     if (anchor) circuitPoints.push(anchor)
+    const isSheetAnnotation = isSchematicSheetAnnotation(element)
+    const position = isSheetAnnotation ? asPoint(element.position) : undefined
+    if (position) circuitPoints.push(position)
+    if (isSheetAnnotation && element.type === "schematic_rect") {
+      const width = asNumber(element.width)
+      const height = asNumber(element.height)
+      if (center && width > 0 && height > 0) {
+        circuitPoints.push(
+          { x: center.x - width / 2, y: center.y - height / 2 },
+          { x: center.x + width / 2, y: center.y + height / 2 },
+        )
+      }
+    }
+    if (
+      isSheetAnnotation &&
+      element.type === "schematic_path" &&
+      Array.isArray(element.points)
+    ) {
+      for (const point of element.points) {
+        const circuitPoint = asPoint(point)
+        if (circuitPoint) circuitPoints.push(circuitPoint)
+      }
+    }
     if (element.type === "schematic_trace" && Array.isArray(element.edges)) {
       for (const edge of element.edges) {
         if (!isCircuitElement(edge)) continue

@@ -1,10 +1,7 @@
+import { createAltiumSchematicFontTable } from "./create-altium-schematic-font-table"
 import { createAltiumSchematicNetLabelRecordFields } from "./create-altium-schematic-net-label-record-fields"
-import {
-  ALTIUM_SCHEMATIC_OFF_SHEET_PORT_FONT_ID,
-  ALTIUM_SCHEMATIC_OFF_SHEET_PORT_FONT_NAME,
-  ALTIUM_SCHEMATIC_OFF_SHEET_PORT_FONT_SIZE_POINTS,
-  createAltiumSchematicOffSheetPortRecordFields,
-} from "./create-altium-schematic-off-sheet-port-record-fields"
+import { createAltiumSchematicOffSheetPortRecordFields } from "./create-altium-schematic-off-sheet-port-record-fields"
+import { createAltiumSchematicSheetAnnotationRecordFields } from "./create-altium-schematic-sheet-annotation-record-fields"
 import { createAltiumSchematicSymbolRecords } from "./create-altium-schematic-symbol-records"
 import {
   asNumber,
@@ -66,7 +63,6 @@ type FallbackSchematicBoxBoundsParams = {
   circuitToAltiumSchematicPoint: PointTransform
 }
 
-const ALTIUM_SCHEMATIC_COMPONENT_FONT_SIZE_POINTS = 4
 const ALTIUM_PIN_STANDARD_FLAGS = 0x20
 const ALTIUM_PIN_NAME_VISIBLE_FLAG = 0x08
 const ALTIUM_PIN_DESIGNATOR_VISIBLE_FLAG = 0x10
@@ -177,6 +173,9 @@ export function createSchematicDocument({
     width: altiumSheetWidth,
     height: altiumSheetHeight,
   } = getSchematicTransform(schematicElements)
+  const altiumSchematicFontTable = createAltiumSchematicFontTable({
+    schematicElements,
+  })
   const schematicRecordContext: SchematicRecordContext = {
     lines: [
       "|HEADER=Protel for Windows - Schematic Capture Ascii File Version 5.0",
@@ -186,13 +185,7 @@ export function createSchematicDocument({
   addSchematicRecord(
     [
       "RECORD=31",
-      `FONTIDCOUNT=${ALTIUM_SCHEMATIC_OFF_SHEET_PORT_FONT_ID}`,
-      `SIZE1=${ALTIUM_SCHEMATIC_COMPONENT_FONT_SIZE_POINTS}`,
-      "FONTNAME1=Arial",
-      `SIZE2=${ALTIUM_SCHEMATIC_COMPONENT_FONT_SIZE_POINTS}`,
-      "FONTNAME2=Arial",
-      `SIZE${ALTIUM_SCHEMATIC_OFF_SHEET_PORT_FONT_ID}=${ALTIUM_SCHEMATIC_OFF_SHEET_PORT_FONT_SIZE_POINTS}`,
-      `FONTNAME${ALTIUM_SCHEMATIC_OFF_SHEET_PORT_FONT_ID}=${ALTIUM_SCHEMATIC_OFF_SHEET_PORT_FONT_NAME}`,
+      ...altiumSchematicFontTable.sheetRecordFields,
       `CUSTOMX=${altiumSheetWidth}`,
       `CUSTOMY=${altiumSheetHeight}`,
       "USECUSTOMSHEET=T",
@@ -481,6 +474,17 @@ export function createSchematicDocument({
       }),
       schematicRecordContext,
     )
+  }
+
+  for (const annotation of schematicElements) {
+    const annotationRecordFields =
+      createAltiumSchematicSheetAnnotationRecordFields({
+        annotation,
+        circuitToAltiumSchematicPoint,
+        fontTable: altiumSchematicFontTable,
+      })
+    if (!annotationRecordFields) continue
+    addSchematicRecord(annotationRecordFields, schematicRecordContext)
   }
 
   return `${schematicRecordContext.lines.join("\r\n")}\r\n`

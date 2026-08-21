@@ -1,4 +1,4 @@
-import { asPoint, asString, isCircuitElement } from "../../lib/format"
+import { asNumber, asPoint, asString, isCircuitElement } from "../../lib/format"
 import type { CircuitElement, Point, SourcePortId } from "../../lib/types"
 
 const preservedElementTypes = [
@@ -8,6 +8,9 @@ const preservedElementTypes = [
   "schematic_component",
   "schematic_port",
   "schematic_net_label",
+  "schematic_path",
+  "schematic_rect",
+  "schematic_text",
 ] as const
 
 type PreservedElementType = (typeof preservedElementTypes)[number]
@@ -31,9 +34,35 @@ export type SchematicOffSheetPortSignature = {
   name: string
 }
 
+export type SchematicAnnotationSignature =
+  | {
+      anchor: string
+      color: string
+      fontSizeCircuitUnits: number
+      rotationDegrees: number
+      text: string
+      type: "schematic_text"
+    }
+  | {
+      color: string
+      fillColor: string
+      isFilled: boolean
+      strokeWidthCircuitUnits: number
+      type: "schematic_rect"
+    }
+  | {
+      fillColor: string
+      isFilled: boolean
+      pointCount: number
+      strokeColor: string
+      strokeWidthCircuitUnits: number
+      type: "schematic_path"
+    }
+
 export type SchematicRoundTripMetrics = {
   componentSizeMaxDeltaCircuitUnits: number
   geometryMaxDeltaCircuitUnits: number
+  roundTripAnnotationSignatures: SchematicAnnotationSignature[]
   roundTripComponentNames: string[]
   roundTripCounts: SchematicPrimitiveCounts
   roundTripNetLabelTexts: string[]
@@ -41,6 +70,7 @@ export type SchematicRoundTripMetrics = {
   roundTripPowerPortSymbolNames: string[]
   roundTripPortNames: string[]
   sourceComponentNames: string[]
+  sourceAnnotationSignatures: SchematicAnnotationSignature[]
   sourceCounts: SchematicPrimitiveCounts
   sourceNetLabelTexts: string[]
   sourceOffSheetPortSignatures: SchematicOffSheetPortSignature[]
@@ -111,12 +141,55 @@ function countSchematicPrimitives(
     power_port: getPowerPortSymbolNames(circuitJson).length,
     schematic_component: getElementCount("schematic_component"),
     schematic_net_label: getElementCount("schematic_net_label"),
+    schematic_path: getElementCount("schematic_path"),
     schematic_port: getElementCount("schematic_port"),
+    schematic_rect: getElementCount("schematic_rect"),
+    schematic_text: getElementCount("schematic_text"),
     source_component: getElementCount("source_component"),
     source_net: getElementCount("source_net"),
     source_port: getElementCount("source_port"),
     wire_segment: wireSegmentCount,
   }
+}
+
+function getSchematicAnnotationSignatures(
+  circuitJson: CircuitElement[],
+): SchematicAnnotationSignature[] {
+  const signatures: SchematicAnnotationSignature[] = []
+  for (const element of circuitJson) {
+    if (element.type === "schematic_text") {
+      signatures.push({
+        anchor: asString(element.anchor),
+        color: asString(element.color),
+        fontSizeCircuitUnits: asNumber(element.font_size),
+        rotationDegrees: asNumber(element.rotation),
+        text: asString(element.text),
+        type: element.type,
+      })
+      continue
+    }
+    if (element.type === "schematic_rect") {
+      signatures.push({
+        color: asString(element.color),
+        fillColor: asString(element.fill_color),
+        isFilled: element.is_filled === true,
+        strokeWidthCircuitUnits: asNumber(element.stroke_width),
+        type: element.type,
+      })
+      continue
+    }
+    if (element.type === "schematic_path") {
+      signatures.push({
+        fillColor: asString(element.fill_color),
+        isFilled: element.is_filled === true,
+        pointCount: Array.isArray(element.points) ? element.points.length : 0,
+        strokeColor: asString(element.stroke_color),
+        strokeWidthCircuitUnits: asNumber(element.stroke_width),
+        type: element.type,
+      })
+    }
+  }
+  return signatures
 }
 
 function getStringFields({
@@ -147,6 +220,32 @@ function getSchematicGeometryPoints(circuitJson: CircuitElement[]): Point[] {
     if (element.type === "schematic_net_label") {
       const anchor = asPoint(element.anchor_position) ?? asPoint(element.center)
       if (anchor) points.push(anchor)
+      continue
+    }
+    if (element.type === "schematic_text") {
+      const position = asPoint(element.position)
+      if (position) points.push(position)
+      continue
+    }
+    if (element.type === "schematic_rect") {
+      const center = asPoint(element.center)
+      const width = asNumber(element.width)
+      const height = asNumber(element.height)
+      if (center) {
+        points.push(
+          { x: center.x - width / 2, y: center.y - height / 2 },
+          { x: center.x + width / 2, y: center.y + height / 2 },
+        )
+      }
+      continue
+    }
+    if (element.type === "schematic_path") {
+      if (Array.isArray(element.points)) {
+        for (const point of element.points) {
+          const circuitPoint = asPoint(point)
+          if (circuitPoint) points.push(circuitPoint)
+        }
+      }
       continue
     }
     if (element.type !== "schematic_trace") continue
@@ -248,6 +347,8 @@ export function getSchematicRoundTripMetrics({
       sourceCircuitJson,
       roundTripCircuitJson,
     ),
+    roundTripAnnotationSignatures:
+      getSchematicAnnotationSignatures(roundTripCircuitJson),
     roundTripComponentNames: getStringFields({
       circuitJson: roundTripCircuitJson,
       elementType: "source_component",
@@ -273,6 +374,8 @@ export function getSchematicRoundTripMetrics({
       elementType: "source_component",
       fieldName: "name",
     }),
+    sourceAnnotationSignatures:
+      getSchematicAnnotationSignatures(sourceCircuitJson),
     sourceCounts,
     sourceNetLabelTexts: getStringFields({
       circuitJson: sourceCircuitJson,
@@ -290,6 +393,9 @@ export function getSchematicRoundTripMetrics({
       sourceCounts.schematic_component +
       sourceCounts.schematic_port +
       sourceCounts.schematic_net_label +
+      sourceCounts.schematic_path +
+      sourceCounts.schematic_rect +
+      sourceCounts.schematic_text +
       sourceCounts.wire_segment +
       sourceCounts.junction,
   }

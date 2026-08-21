@@ -12,6 +12,9 @@ test("round-trips the open-source NodeMCU ESP-12 Altium schematic", async () => 
   expect(result.roundTripComponentNames).toEqual(result.sourceComponentNames)
   expect(result.roundTripPortNames).toEqual(result.sourcePortNames)
   expect(result.roundTripNetLabelTexts).toEqual(result.sourceNetLabelTexts)
+  expect(result.roundTripAnnotationSignatures).toEqual(
+    result.sourceAnnotationSignatures,
+  )
   expect(result.roundTripOffSheetPortSignatures).toEqual(
     result.sourceOffSheetPortSignatures,
   )
@@ -25,6 +28,11 @@ test("round-trips the open-source NodeMCU ESP-12 Altium schematic", async () => 
   expect(result.componentSizeMaxDeltaCircuitUnits).toBeLessThan(0.06)
   expect(result.sourceCounts.off_sheet_port).toBe(0)
   expect(result.sourceCounts.power_port).toBe(37)
+  expect({
+    path: result.sourceCounts.schematic_path,
+    rect: result.sourceCounts.schematic_rect,
+    text: result.sourceCounts.schematic_text,
+  }).toEqual({ path: 17, rect: 3, text: 63 })
   expect(result.sourceSupportedPrimitiveTotal).toBeGreaterThan(300)
   await expect(
     createSideBySideSvg(result.sourceSvg, result.roundTripSvg),
