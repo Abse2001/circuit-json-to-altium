@@ -477,16 +477,17 @@ export function createSchematicDocument({
     )
   }
 
-  for (const schematicNoConnect of schematicElements.filter(
-    (element) => element.type === "schematic_no_connect",
+  for (const schematicPort of schematicElements.filter(
+    (element) => element.type === "schematic_port",
   )) {
-    const circuitNoConnectPosition = asPoint(schematicNoConnect.center)
-    if (!circuitNoConnectPosition) continue
+    const sourcePort = sourcePorts.get(asString(schematicPort.source_port_id))
+    if (sourcePort?.do_not_connect !== true) continue
+    const circuitPortPosition = asPoint(schematicPort.center)
+    if (!circuitPortPosition) continue
     addSchematicRecord(
       createAltiumSchematicNoConnectRecordFields({
-        altiumNoConnectPosition: circuitToAltiumSchematicPoint(
-          circuitNoConnectPosition,
-        ),
+        altiumNoConnectPosition:
+          circuitToAltiumSchematicPoint(circuitPortPosition),
       }),
       schematicRecordContext,
     )

@@ -8,7 +8,6 @@ const preservedElementTypes = [
   "schematic_component",
   "schematic_port",
   "schematic_net_label",
-  "schematic_no_connect",
   "schematic_path",
   "schematic_rect",
   "schematic_text",
@@ -22,6 +21,7 @@ type CircuitSize = {
 }
 
 export type SchematicPrimitiveCounts = Record<PreservedElementType, number> & {
+  do_not_connect: number
   junction: number
   off_sheet_port: number
   power_port: number
@@ -137,12 +137,15 @@ function countSchematicPrimitives(
     wireSegmentCount += Array.isArray(element.edges) ? element.edges.length : 0
   }
   return {
+    do_not_connect: circuitJson.filter(
+      (element) =>
+        element.type === "source_port" && element.do_not_connect === true,
+    ).length,
     junction: junctionCount,
     off_sheet_port: getOffSheetPortSignatures(circuitJson).length,
     power_port: getPowerPortSymbolNames(circuitJson).length,
     schematic_component: getElementCount("schematic_component"),
     schematic_net_label: getElementCount("schematic_net_label"),
-    schematic_no_connect: getElementCount("schematic_no_connect"),
     schematic_path: getElementCount("schematic_path"),
     schematic_port: getElementCount("schematic_port"),
     schematic_rect: getElementCount("schematic_rect"),
@@ -213,7 +216,6 @@ function getSchematicGeometryPoints(circuitJson: CircuitElement[]): Point[] {
   for (const element of circuitJson) {
     if (
       element.type === "schematic_component" ||
-      element.type === "schematic_no_connect" ||
       element.type === "schematic_port"
     ) {
       const center = asPoint(element.center)
@@ -394,7 +396,7 @@ export function getSchematicRoundTripMetrics({
     }),
     sourceSupportedPrimitiveTotal:
       sourceCounts.schematic_component +
-      sourceCounts.schematic_no_connect +
+      sourceCounts.do_not_connect +
       sourceCounts.schematic_port +
       sourceCounts.schematic_net_label +
       sourceCounts.schematic_path +

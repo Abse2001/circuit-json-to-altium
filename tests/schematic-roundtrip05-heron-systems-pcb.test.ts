@@ -27,7 +27,7 @@ test("round-trips the open-source HERON systems PCB Altium schematic", async () 
   expect(result.geometryMaxDeltaCircuitUnits).toBeLessThan(0.06)
   expect(result.componentSizeMaxDeltaCircuitUnits).toBeLessThan(0.06)
   expect(result.sourceCounts.off_sheet_port).toBe(0)
-  expect(result.sourceCounts.schematic_no_connect).toBe(10)
+  expect(result.sourceCounts.do_not_connect).toBe(8)
   expect(result.sourceCounts.power_port).toBe(38)
   expect({
     path: result.sourceCounts.schematic_path,
