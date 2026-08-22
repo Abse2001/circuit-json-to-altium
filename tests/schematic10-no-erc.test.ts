@@ -10,8 +10,8 @@ import {
 const elements: CircuitElement[] = [
   board(),
   {
-    type: "no_erc",
-    no_erc_id: "no_erc_1",
+    type: "schematic_no_erc",
+    schematic_no_erc_id: "schematic_no_erc_1",
     center: { x: 2, y: 3 },
   },
 ]

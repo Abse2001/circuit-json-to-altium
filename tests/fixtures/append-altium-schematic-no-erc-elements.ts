@@ -5,23 +5,23 @@ import {
   toCircuitPoint,
 } from "./altium-schematic-coordinate-utils"
 
-type AppendAltiumNoErcElementsInput = {
+type AppendAltiumSchematicNoErcElementsInput = {
   document: AltiumSchDoc
   elements: CircuitElement[]
 }
 
-export function appendAltiumNoErcElements({
+export function appendAltiumSchematicNoErcElements({
   document,
   elements,
-}: AppendAltiumNoErcElementsInput): void {
+}: AppendAltiumSchematicNoErcElementsInput): void {
   const noErcRecords = document
     .getRecordsByKind("22")
     .filter((record) => document.getParent(record) === undefined)
 
   for (const [noErcIndex, noErcRecord] of noErcRecords.entries()) {
     elements.push({
-      type: "no_erc",
-      no_erc_id: `no_erc_${noErcIndex}`,
+      type: "schematic_no_erc",
+      schematic_no_erc_id: `schematic_no_erc_${noErcIndex}`,
       center: toCircuitPoint(getRecordLocation(noErcRecord)),
     })
   }

@@ -1,14 +1,14 @@
 import type { Point } from "./types"
 
-type NoErcRecordFieldsInput = {
+type SchematicNoErcRecordFieldsInput = {
   altiumNoErcPosition: Point
 }
 
 const ALTIUM_NO_ERC_COLOR = 255
 
-export function createAltiumNoErcRecordFields({
+export function createAltiumSchematicNoErcRecordFields({
   altiumNoErcPosition,
-}: NoErcRecordFieldsInput): string[] {
+}: SchematicNoErcRecordFieldsInput): string[] {
   return [
     "RECORD=22",
     `LOCATION.X=${altiumNoErcPosition.x}`,

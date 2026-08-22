@@ -1,6 +1,6 @@
-import { createAltiumNoErcRecordFields } from "./create-altium-no-erc-record-fields"
 import { createAltiumSchematicFontTable } from "./create-altium-schematic-font-table"
 import { createAltiumSchematicNetLabelRecordFields } from "./create-altium-schematic-net-label-record-fields"
+import { createAltiumSchematicNoErcRecordFields } from "./create-altium-schematic-no-erc-record-fields"
 import { createAltiumSchematicOffSheetPortRecordFields } from "./create-altium-schematic-off-sheet-port-record-fields"
 import { createAltiumSchematicSheetAnnotationRecordFields } from "./create-altium-schematic-sheet-annotation-record-fields"
 import { createAltiumSchematicSymbolRecords } from "./create-altium-schematic-symbol-records"
@@ -161,8 +161,7 @@ export function createSchematicDocument({
 }: CreateSchematicDocumentParams): string {
   const schematicElements = circuitJson.filter(
     (element) =>
-      (element.type === "no_erc" ||
-        element.type?.startsWith("schematic_") === true) &&
+      element.type?.startsWith("schematic_") === true &&
       element.type !== "schematic_sheet" &&
       doesElementBelongToSchematicSheet({
         element,
@@ -478,13 +477,13 @@ export function createSchematicDocument({
     )
   }
 
-  for (const noErc of schematicElements.filter(
-    (element) => element.type === "no_erc",
+  for (const schematicNoErc of schematicElements.filter(
+    (element) => element.type === "schematic_no_erc",
   )) {
-    const circuitNoErcPosition = asPoint(noErc.center)
+    const circuitNoErcPosition = asPoint(schematicNoErc.center)
     if (!circuitNoErcPosition) continue
     addSchematicRecord(
-      createAltiumNoErcRecordFields({
+      createAltiumSchematicNoErcRecordFields({
         altiumNoErcPosition:
           circuitToAltiumSchematicPoint(circuitNoErcPosition),
       }),
