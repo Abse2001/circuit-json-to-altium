@@ -161,7 +161,8 @@ export function createSchematicDocument({
 }: CreateSchematicDocumentParams): string {
   const schematicElements = circuitJson.filter(
     (element) =>
-      element.type?.startsWith("schematic_") === true &&
+      (element.type === "no_erc" ||
+        element.type?.startsWith("schematic_") === true) &&
       element.type !== "schematic_sheet" &&
       doesElementBelongToSchematicSheet({
         element,
@@ -477,14 +478,15 @@ export function createSchematicDocument({
     )
   }
 
-  for (const schematicPort of schematicElements.filter(
-    (element) => element.type === "schematic_port" && element.no_erc === true,
+  for (const noErc of schematicElements.filter(
+    (element) => element.type === "no_erc",
   )) {
-    const circuitPortPosition = asPoint(schematicPort.center)
-    if (!circuitPortPosition) continue
+    const circuitNoErcPosition = asPoint(noErc.center)
+    if (!circuitNoErcPosition) continue
     addSchematicRecord(
       createAltiumNoErcRecordFields({
-        altiumNoErcPosition: circuitToAltiumSchematicPoint(circuitPortPosition),
+        altiumNoErcPosition:
+          circuitToAltiumSchematicPoint(circuitNoErcPosition),
       }),
       schematicRecordContext,
     )
