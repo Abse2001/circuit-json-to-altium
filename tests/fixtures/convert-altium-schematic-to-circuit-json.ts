@@ -17,6 +17,7 @@ import {
   toCircuitPoint,
 } from "./altium-schematic-coordinate-utils"
 import { appendAltiumSchematicSheetAnnotationElements } from "./append-altium-schematic-sheet-annotation-elements"
+import { applyAltiumNoConnectToSourcePorts } from "./apply-altium-no-connect-to-source-ports"
 
 type AltiumBounds = {
   maxX: number
@@ -483,6 +484,7 @@ export function convertAltiumSchematicToCircuitJson(
   appendOffSheetPortElements(document, elements)
   appendWireElements(document, elements)
   appendNetLabelElements(document, elements)
+  applyAltiumNoConnectToSourcePorts({ document, elements })
   appendAltiumSchematicSheetAnnotationElements(document, elements)
   return elements
 }

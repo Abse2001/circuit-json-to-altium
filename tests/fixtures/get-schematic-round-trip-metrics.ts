@@ -21,6 +21,7 @@ type CircuitSize = {
 }
 
 export type SchematicPrimitiveCounts = Record<PreservedElementType, number> & {
+  do_not_connect: number
   junction: number
   off_sheet_port: number
   power_port: number
@@ -136,6 +137,10 @@ function countSchematicPrimitives(
     wireSegmentCount += Array.isArray(element.edges) ? element.edges.length : 0
   }
   return {
+    do_not_connect: circuitJson.filter(
+      (element) =>
+        element.type === "source_port" && element.do_not_connect === true,
+    ).length,
     junction: junctionCount,
     off_sheet_port: getOffSheetPortSignatures(circuitJson).length,
     power_port: getPowerPortSymbolNames(circuitJson).length,
@@ -391,6 +396,7 @@ export function getSchematicRoundTripMetrics({
     }),
     sourceSupportedPrimitiveTotal:
       sourceCounts.schematic_component +
+      sourceCounts.do_not_connect +
       sourceCounts.schematic_port +
       sourceCounts.schematic_net_label +
       sourceCounts.schematic_path +
