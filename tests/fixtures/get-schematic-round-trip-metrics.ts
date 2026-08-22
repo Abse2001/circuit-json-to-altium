@@ -8,7 +8,6 @@ const preservedElementTypes = [
   "schematic_component",
   "schematic_port",
   "schematic_net_label",
-  "no_erc",
   "schematic_path",
   "schematic_rect",
   "schematic_text",
@@ -23,6 +22,7 @@ type CircuitSize = {
 
 export type SchematicPrimitiveCounts = Record<PreservedElementType, number> & {
   junction: number
+  no_erc: number
   off_sheet_port: number
   power_port: number
   wire_segment: number
@@ -142,7 +142,9 @@ function countSchematicPrimitives(
     power_port: getPowerPortSymbolNames(circuitJson).length,
     schematic_component: getElementCount("schematic_component"),
     schematic_net_label: getElementCount("schematic_net_label"),
-    no_erc: getElementCount("no_erc"),
+    no_erc: circuitJson.filter(
+      (element) => element.type === "schematic_port" && element.no_erc === true,
+    ).length,
     schematic_path: getElementCount("schematic_path"),
     schematic_port: getElementCount("schematic_port"),
     schematic_rect: getElementCount("schematic_rect"),
@@ -213,7 +215,6 @@ function getSchematicGeometryPoints(circuitJson: CircuitElement[]): Point[] {
   for (const element of circuitJson) {
     if (
       element.type === "schematic_component" ||
-      element.type === "no_erc" ||
       element.type === "schematic_port"
     ) {
       const center = asPoint(element.center)
