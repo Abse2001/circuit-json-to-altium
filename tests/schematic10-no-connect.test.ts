@@ -10,28 +10,28 @@ import {
 const elements: CircuitElement[] = [
   board(),
   {
-    type: "schematic_no_erc",
-    schematic_no_erc_id: "schematic_no_erc_1",
+    type: "schematic_no_connect",
+    schematic_no_connect_id: "schematic_no_connect_1",
     center: { x: 2, y: 3 },
   },
 ]
 
-test("writes no ERC directives as native Altium records", async () => {
+test("writes schematic no-connect markers as native Altium records", async () => {
   const { schematics } = await extractArchive(elements)
   const schematic = schematics[0] as AltiumSchDoc
-  const noErcRecord = schematic.getRecordsByKind("22")[0]
-  if (!(noErcRecord instanceof AltiumSchNoErcRecord)) {
+  const noConnectRecord = schematic.getRecordsByKind("22")[0]
+  if (!(noConnectRecord instanceof AltiumSchNoErcRecord)) {
     throw new Error("Expected a native Altium No ERC record")
   }
 
   expect({
-    color: noErcRecord.getNumber("COLOR"),
-    isActive: noErcRecord.getBoolean("ISACTIVE"),
-    orientation: noErcRecord.getNumber("ORIENTATION"),
-    ownerPartId: noErcRecord.getNumber("OWNERPARTID"),
-    position: noErcRecord.position,
-    suppressAll: noErcRecord.getBoolean("SUPPRESSALL"),
-    symbol: noErcRecord.getDecoded("SYMBOL"),
+    color: noConnectRecord.getNumber("COLOR"),
+    isActive: noConnectRecord.getBoolean("ISACTIVE"),
+    orientation: noConnectRecord.getNumber("ORIENTATION"),
+    ownerPartId: noConnectRecord.getNumber("OWNERPARTID"),
+    position: noConnectRecord.position,
+    suppressAll: noConnectRecord.getBoolean("SUPPRESSALL"),
+    symbol: noConnectRecord.getDecoded("SYMBOL"),
   }).toEqual({
     color: 255,
     isActive: true,
