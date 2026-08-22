@@ -1,6 +1,6 @@
+import { createAltiumNoErcRecordFields } from "./create-altium-no-erc-record-fields"
 import { createAltiumSchematicFontTable } from "./create-altium-schematic-font-table"
 import { createAltiumSchematicNetLabelRecordFields } from "./create-altium-schematic-net-label-record-fields"
-import { createAltiumSchematicNoConnectRecordFields } from "./create-altium-schematic-no-connect-record-fields"
 import { createAltiumSchematicOffSheetPortRecordFields } from "./create-altium-schematic-off-sheet-port-record-fields"
 import { createAltiumSchematicSheetAnnotationRecordFields } from "./create-altium-schematic-sheet-annotation-record-fields"
 import { createAltiumSchematicSymbolRecords } from "./create-altium-schematic-symbol-records"
@@ -161,7 +161,8 @@ export function createSchematicDocument({
 }: CreateSchematicDocumentParams): string {
   const schematicElements = circuitJson.filter(
     (element) =>
-      element.type?.startsWith("schematic_") === true &&
+      (element.type === "no_erc" ||
+        element.type?.startsWith("schematic_") === true) &&
       element.type !== "schematic_sheet" &&
       doesElementBelongToSchematicSheet({
         element,
@@ -477,16 +478,15 @@ export function createSchematicDocument({
     )
   }
 
-  for (const schematicNoConnect of schematicElements.filter(
-    (element) => element.type === "schematic_no_connect",
+  for (const noErc of schematicElements.filter(
+    (element) => element.type === "no_erc",
   )) {
-    const circuitNoConnectPosition = asPoint(schematicNoConnect.center)
-    if (!circuitNoConnectPosition) continue
+    const circuitNoErcPosition = asPoint(noErc.center)
+    if (!circuitNoErcPosition) continue
     addSchematicRecord(
-      createAltiumSchematicNoConnectRecordFields({
-        altiumNoConnectPosition: circuitToAltiumSchematicPoint(
-          circuitNoConnectPosition,
-        ),
+      createAltiumNoErcRecordFields({
+        altiumNoErcPosition:
+          circuitToAltiumSchematicPoint(circuitNoErcPosition),
       }),
       schematicRecordContext,
     )
