@@ -1,3 +1,4 @@
+import { getAltiumColorFromCss } from "./altium-color"
 import { createAltiumSchematicFontTable } from "./create-altium-schematic-font-table"
 import { createAltiumSchematicNetLabelRecordFields } from "./create-altium-schematic-net-label-record-fields"
 import { createAltiumSchematicNoConnectRecordFields } from "./create-altium-schematic-no-connect-record-fields"
@@ -5,6 +6,7 @@ import { createAltiumSchematicOffSheetPortRecordFields } from "./create-altium-s
 import { createAltiumSchematicSheetAnnotationRecordFields } from "./create-altium-schematic-sheet-annotation-record-fields"
 import { createAltiumSchematicSymbolPrimitiveRecordFields } from "./create-altium-schematic-symbol-primitive-record-fields"
 import { createAltiumSchematicSymbolRecords } from "./create-altium-schematic-symbol-records"
+import { createAltiumSchematicTextRecordFields } from "./create-altium-schematic-text-record-fields"
 import { findSchematicComponentText } from "./find-schematic-component-text"
 import {
   asNumber,
@@ -352,6 +354,11 @@ export function createSchematicDocument({
       excludedText: designatorText,
       renderedText: componentComment,
     })
+    const componentGraphicTexts = componentTexts.filter(
+      (componentText) =>
+        componentText !== designatorText && componentText !== commentText,
+    )
+    const hasExplicitComponentTextPresentation = componentTexts.length > 0
     const schematicSymbol = schematicSymbols.get(
       asString(schematicComponent.schematic_symbol_id),
     )
@@ -518,14 +525,38 @@ export function createSchematicDocument({
       const altiumPinOrientation =
         ALTIUM_PIN_ORIENTATION_BY_FACING_DIRECTION[facingDirection] ?? 2
       const isPinTextVisibleByDefault = !schematicSymbolRecords
+      const pinName =
+        sanitizeField(schematicPort.display_pin_label) ||
+        sanitizeField(sourcePort?.name) ||
+        `Pin ${pinIndex + 1}`
+      const pinDesignator =
+        sanitizeField(sourcePort?.pin_number) || `${pinIndex + 1}`
+      const pinNameText =
+        typeof schematicPort.display_pin_label === "string"
+          ? findSchematicComponentText({
+              componentTexts: componentGraphicTexts,
+              excludedText: undefined,
+              renderedText: pinName,
+            })
+          : undefined
+      const pinNumberText =
+        typeof schematicPort.pin_number === "number"
+          ? findSchematicComponentText({
+              componentTexts: componentGraphicTexts,
+              excludedText: pinNameText,
+              renderedText: pinDesignator,
+            })
+          : undefined
       const isPinNameVisible =
-        typeof schematicPort.is_pin_name_visible === "boolean"
-          ? schematicPort.is_pin_name_visible
-          : isPinTextVisibleByDefault
+        pinNameText === undefined &&
+        (hasExplicitComponentTextPresentation
+          ? typeof schematicPort.display_pin_label === "string"
+          : isPinTextVisibleByDefault)
       const isPinNumberVisible =
-        typeof schematicPort.is_pin_number_visible === "boolean"
-          ? schematicPort.is_pin_number_visible
-          : isPinTextVisibleByDefault
+        pinNumberText === undefined &&
+        (hasExplicitComponentTextPresentation
+          ? typeof schematicPort.pin_number === "number"
+          : isPinTextVisibleByDefault)
       const altiumPinTextVisibilityFlags =
         (isPinNameVisible ? ALTIUM_PIN_NAME_VISIBLE_FLAG : 0) |
         (isPinNumberVisible ? ALTIUM_PIN_DESIGNATOR_VISIBLE_FLAG : 0)
@@ -533,26 +564,40 @@ export function createSchematicDocument({
         ALTIUM_PIN_STANDARD_FLAGS |
         altiumPinTextVisibilityFlags |
         altiumPinOrientation
-      const pinFontId =
-        altiumSchematicFontTable.fontIdBySizeCircuitUnits.get(
-          asNumber(schematicPort.pin_text_font_size),
-        ) ?? 2
+      const explicitPinText = pinNameText ?? pinNumberText
+      const pinColorRecordFields = explicitPinText
+        ? [
+            `COLOR=${getAltiumColorFromCss({
+              cssColor: asString(explicitPinText.color),
+              fallbackAltiumColor: ALTIUM_SCHEMATIC_DEFAULT_COLOR,
+            })}`,
+          ]
+        : []
       addSchematicRecord(
         [
           "RECORD=2",
           `OWNERINDEX=${altiumComponentRecordIndex}`,
           "OWNERPARTID=1",
-          `DESIGNATOR=${sanitizeField(sourcePort?.pin_number) || pinIndex + 1}`,
-          `NAME=${sanitizeField(schematicPort.display_pin_label) || sanitizeField(sourcePort?.name) || `Pin ${pinIndex + 1}`}`,
+          `DESIGNATOR=${pinDesignator}`,
+          `NAME=${pinName}`,
           `PINCONGLOMERATE=${altiumPinConglomerate}`,
           `LOCATION.X=${altiumPinLocation.x}`,
           `LOCATION.Y=${altiumPinLocation.y}`,
           `PINLENGTH=${altiumPinLength}`,
-          "COLOR=136",
-          `FONTID=${pinFontId}`,
+          ...pinColorRecordFields,
+          "FONTID=2",
         ],
         schematicRecordContext,
       )
+    }
+    for (const componentGraphicText of componentGraphicTexts) {
+      const recordFields = createAltiumSchematicTextRecordFields({
+        altiumComponentRecordIndex,
+        circuitToAltiumSchematicPoint,
+        fontTable: altiumSchematicFontTable,
+        schematicText: componentGraphicText,
+      })
+      if (recordFields) addSchematicRecord(recordFields, schematicRecordContext)
     }
   }
 

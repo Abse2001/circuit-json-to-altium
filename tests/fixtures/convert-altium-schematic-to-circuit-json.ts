@@ -21,10 +21,11 @@ import {
   toCircuitLength,
   toCircuitPoint,
 } from "./altium-schematic-coordinate-utils"
+import { appendAltiumSchematicComponentTextElements } from "./append-altium-schematic-component-text-elements"
+import { appendAltiumSchematicPinTextElements } from "./append-altium-schematic-pin-text-elements"
 import { appendAltiumSchematicSheetAnnotationElements } from "./append-altium-schematic-sheet-annotation-elements"
 import { appendAltiumSchematicSymbolPrimitives } from "./append-altium-schematic-symbol-primitives"
 import { applyAltiumNoConnectToSourcePorts } from "./apply-altium-no-connect-to-source-ports"
-import { getAltiumSchematicFont } from "./get-altium-schematic-text-frame-lines"
 import { getAltiumSchematicTextPresentation } from "./get-altium-schematic-text-presentation"
 import { isAltiumSchematicComponentRecordVisible } from "./is-altium-schematic-component-record-visible"
 
@@ -358,6 +359,12 @@ function appendComponentElements({
     parameterName: "comment",
     schematicComponentId,
   })
+  appendAltiumSchematicComponentTextElements({
+    component,
+    document,
+    elements,
+    schematicComponentId,
+  })
 
   const visiblePins = document
     .getOwnedRecords(component)
@@ -370,11 +377,12 @@ function appendComponentElements({
     const pinNumber = getNumericPinNumber(pin.designator)
     const orientation = getPinOrientation(pin)
     const pinConglomerate = pin.getNumber("PINCONGLOMERATE")
-    const pinFont = getAltiumSchematicFont({
-      document,
-      fallbackSizePoints: 9,
-      record: pin,
-    })
+    const isPinNameVisible =
+      pinConglomerate === undefined ||
+      (pinConglomerate & ALTIUM_PIN_NAME_VISIBLE_FLAG) !== 0
+    const isPinNumberVisible =
+      pinConglomerate === undefined ||
+      (pinConglomerate & ALTIUM_PIN_NUMBER_VISIBLE_FLAG) !== 0
     elements.push(
       {
         type: "source_port",
@@ -401,17 +409,22 @@ function appendComponentElements({
         ),
         facing_direction:
           PIN_FACING_DIRECTION_BY_ORIENTATION[orientation] ?? "right",
-        is_pin_name_visible:
-          pinConglomerate === undefined ||
-          (pinConglomerate & ALTIUM_PIN_NAME_VISIBLE_FLAG) !== 0,
-        is_pin_number_visible:
-          pinConglomerate === undefined ||
-          (pinConglomerate & ALTIUM_PIN_NUMBER_VISIBLE_FLAG) !== 0,
-        pin_text_font_size: toCircuitLength(pinFont.sizePoints),
-        ...(pinNumber === undefined ? {} : { pin_number: pinNumber }),
-        ...(pin.name ? { display_pin_label: pin.name } : {}),
+        ...(isPinNumberVisible && pinNumber !== undefined
+          ? { pin_number: pinNumber }
+          : {}),
+        ...(isPinNameVisible && pin.name
+          ? { display_pin_label: pin.name }
+          : {}),
       },
     )
+    appendAltiumSchematicPinTextElements({
+      componentIndex,
+      document,
+      elements,
+      pin,
+      pinIndex,
+      schematicComponentId,
+    })
   }
 }
 

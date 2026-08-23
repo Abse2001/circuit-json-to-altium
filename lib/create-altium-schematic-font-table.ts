@@ -44,11 +44,7 @@ export function createAltiumSchematicFontTable({
     ...new Set(
       schematicElements.flatMap((element) => {
         const fontSizeCircuitUnits =
-          element.type === "schematic_text"
-            ? asNumber(element.font_size)
-            : element.type === "schematic_port"
-              ? asNumber(element.pin_text_font_size)
-              : 0
+          element.type === "schematic_text" ? asNumber(element.font_size) : 0
         return fontSizeCircuitUnits > 0 ? [fontSizeCircuitUnits] : []
       }),
     ),

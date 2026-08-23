@@ -66,6 +66,28 @@ test("preserves component and pin text presentation", async () => {
       color: "#654321",
     },
     {
+      type: "schematic_text",
+      schematic_text_id: "schematic_text_pin_name",
+      schematic_component_id: "schematic_capacitor",
+      text: "positive",
+      position: { x: -0.9, y: 0 },
+      font_size: 0.35,
+      rotation: 0,
+      anchor: "bottom_left",
+      color: "#0a0b0c",
+    },
+    {
+      type: "schematic_text",
+      schematic_text_id: "schematic_text_pin_number",
+      schematic_component_id: "schematic_capacitor",
+      text: "2",
+      position: { x: 0.9, y: 0 },
+      font_size: 0.4,
+      rotation: 0,
+      anchor: "bottom_right",
+      color: "#0d0e0f",
+    },
+    {
       type: "schematic_port",
       schematic_port_id: "schematic_port_1",
       schematic_component_id: "schematic_capacitor",
@@ -74,10 +96,6 @@ test("preserves component and pin text presentation", async () => {
       facing_direction: "left",
       distance_from_component_edge: 0.2,
       display_pin_label: "positive",
-      pin_number: 1,
-      is_pin_name_visible: true,
-      is_pin_number_visible: false,
-      pin_text_font_size: 0.35,
     },
     {
       type: "schematic_port",
@@ -87,11 +105,7 @@ test("preserves component and pin text presentation", async () => {
       center: { x: 1, y: 0 },
       facing_direction: "right",
       distance_from_component_edge: 0.2,
-      display_pin_label: "negative",
       pin_number: 2,
-      is_pin_name_visible: false,
-      is_pin_number_visible: true,
-      pin_text_font_size: 0.4,
     },
   ]
   const schematicElements = elements.filter(
@@ -101,6 +115,8 @@ test("preserves component and pin text presentation", async () => {
     getSchematicTransform(schematicElements).circuitToAltiumSchematicPoint
   const expectedDesignatorPosition = pointTransform({ x: -0.8, y: 0.8 })
   const expectedValuePosition = pointTransform({ x: 0.8, y: -0.8 })
+  const expectedPinNamePosition = pointTransform({ x: -0.9, y: 0 })
+  const expectedPinNumberPosition = pointTransform({ x: 0.9, y: 0 })
 
   const { schematics } = await extractArchive(elements)
   const schematic = schematics[0]
@@ -114,6 +130,7 @@ test("preserves component and pin text presentation", async () => {
   const designator = ownedRecords.find((record) => record.recordKind === "34")
   const value = ownedRecords.find((record) => record.recordKind === "41")
   const pins = ownedRecords.filter((record) => record.recordKind === "2")
+  const pinTexts = ownedRecords.filter((record) => record.recordKind === "4")
   expect({
     designator: {
       color: designator?.getNumber("COLOR"),
@@ -126,11 +143,18 @@ test("preserves component and pin text presentation", async () => {
       position: designator ? getRecordLocation(designator) : undefined,
     },
     pins: pins.map((pin) => ({
+      color: pin.getNumber("COLOR"),
+      pinConglomerate: pin.getNumber("PINCONGLOMERATE"),
+    })),
+    pinTexts: pinTexts.map((pinText) => ({
+      color: pinText.getNumber("COLOR"),
       fontSizePoints: getFontSizePoints({
-        fontId: pin.getNumber("FONTID"),
+        fontId: pinText.getNumber("FONTID"),
         sheetRecord,
       }),
-      pinConglomerate: pin.getNumber("PINCONGLOMERATE"),
+      justification: pinText.getNumber("JUSTIFICATION"),
+      position: getRecordLocation(pinText),
+      text: pinText.getDecoded("TEXT"),
     })),
     value: {
       color: value?.getNumber("COLOR"),
@@ -151,8 +175,24 @@ test("preserves component and pin text presentation", async () => {
       position: expectedDesignatorPosition,
     },
     pins: [
-      { fontSizePoints: 7, pinConglomerate: 42 },
-      { fontSizePoints: 8, pinConglomerate: 48 },
+      { color: 0x0c_0b_0a, pinConglomerate: 34 },
+      { color: 0x0f_0e_0d, pinConglomerate: 32 },
+    ],
+    pinTexts: [
+      {
+        color: 0x0c_0b_0a,
+        fontSizePoints: 7,
+        justification: 0,
+        position: expectedPinNamePosition,
+        text: "positive",
+      },
+      {
+        color: 0x0f_0e_0d,
+        fontSizePoints: 8,
+        justification: 2,
+        position: expectedPinNumberPosition,
+        text: "2",
+      },
     ],
     value: {
       color: 0x21_43_65,
