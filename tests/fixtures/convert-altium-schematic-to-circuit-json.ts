@@ -17,7 +17,9 @@ import {
   toCircuitPoint,
 } from "./altium-schematic-coordinate-utils"
 import { appendAltiumSchematicSheetAnnotationElements } from "./append-altium-schematic-sheet-annotation-elements"
+import { appendAltiumSchematicSymbolPrimitives } from "./append-altium-schematic-symbol-primitives"
 import { applyAltiumNoConnectToSourcePorts } from "./apply-altium-no-connect-to-source-ports"
+import { isAltiumSchematicComponentRecordVisible } from "./is-altium-schematic-component-record-visible"
 
 type AltiumBounds = {
   maxX: number
@@ -97,30 +99,15 @@ function getGraphicRecordPoints(record: AltiumRecord): AltiumPoint[] {
   return []
 }
 
-function isRecordVisibleForComponent(
-  component: AltiumSchComponentRecord,
-  record: AltiumRecord,
-): boolean {
-  const ownerPartId = record.getNumber("OWNERPARTID")
-  const currentPartId = component.getNumber("CURRENTPARTID") ?? 1
-  const partMatches =
-    ownerPartId === undefined ||
-    ownerPartId <= 0 ||
-    ownerPartId === currentPartId
-  const ownerPartDisplayMode = record.getNumber("OWNERPARTDISPLAYMODE")
-  return (
-    partMatches &&
-    (ownerPartDisplayMode === undefined || ownerPartDisplayMode === 0)
-  )
-}
-
 function getComponentBounds(
   document: AltiumSchDoc,
   component: AltiumSchComponentRecord,
 ): AltiumBounds {
   const points = document
     .getOwnedRecords(component)
-    .filter((record) => isRecordVisibleForComponent(component, record))
+    .filter((record) =>
+      isAltiumSchematicComponentRecordVisible({ component, record }),
+    )
     .flatMap(getGraphicRecordPoints)
 
   if (points.length === 0) {
@@ -171,7 +158,10 @@ function isVisiblePin(
   const isHidden =
     pin.hidden === true ||
     (pinConglomerate !== undefined && (pinConglomerate & 0x04) !== 0)
-  return !isHidden && isRecordVisibleForComponent(component, pin)
+  return (
+    !isHidden &&
+    isAltiumSchematicComponentRecordVisible({ component, record: pin })
+  )
 }
 
 function getPinOrientation(pin: AltiumSchPinRecord): number {
@@ -260,6 +250,7 @@ function appendComponentElements({
 }): void {
   const sourceComponentId = `source_component_${componentIndex}`
   const schematicComponentId = `schematic_component_${componentIndex}`
+  const schematicSymbolId = `schematic_symbol_${componentIndex}`
   const bounds = getComponentBounds(document, component)
   const center = toCircuitPoint({
     x: (bounds.minX + bounds.maxX) / 2,
@@ -285,18 +276,31 @@ function appendComponentElements({
       name: designator,
     },
     {
+      type: "schematic_symbol",
+      schematic_symbol_id: schematicSymbolId,
+      name: component.libraryReference ?? designator,
+    },
+    {
       type: "schematic_component",
       schematic_component_id: schematicComponentId,
       source_component_id: sourceComponentId,
+      schematic_symbol_id: schematicSymbolId,
       center,
       size: {
         width: toCircuitLength(Math.max(bounds.maxX - bounds.minX, 1)),
         height: toCircuitLength(Math.max(bounds.maxY - bounds.minY, 1)),
       },
-      symbol_name: component.libraryReference ?? designator,
       ...(comment ? { symbol_display_value: comment } : {}),
     },
   )
+
+  appendAltiumSchematicSymbolPrimitives({
+    component,
+    document,
+    elements,
+    schematicComponentId,
+    schematicSymbolId,
+  })
 
   const visiblePins = document
     .getOwnedRecords(component)

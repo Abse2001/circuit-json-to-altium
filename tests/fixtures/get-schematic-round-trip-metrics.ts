@@ -13,7 +13,17 @@ const preservedElementTypes = [
   "schematic_text",
 ] as const
 
+const schematicSymbolPrimitiveTypes = [
+  "schematic_arc",
+  "schematic_circle",
+  "schematic_line",
+  "schematic_path",
+  "schematic_rect",
+] as const
+
 type PreservedElementType = (typeof preservedElementTypes)[number]
+type SchematicSymbolPrimitiveType =
+  (typeof schematicSymbolPrimitiveTypes)[number]
 
 type CircuitSize = {
   height: number
@@ -26,6 +36,14 @@ export type SchematicPrimitiveCounts = Record<PreservedElementType, number> & {
   off_sheet_port: number
   power_port: number
   wire_segment: number
+}
+
+export type SchematicSymbolPrimitiveCounts = Record<
+  SchematicSymbolPrimitiveType,
+  number
+> & {
+  filled_path: number
+  total: number
 }
 
 export type SchematicOffSheetPortSignature = {
@@ -64,6 +82,7 @@ export type SchematicRoundTripMetrics = {
   componentSizeMaxDeltaCircuitUnits: number
   geometryMaxDeltaCircuitUnits: number
   roundTripAnnotationSignatures: SchematicAnnotationSignature[]
+  roundTripSymbolPrimitiveCounts: SchematicSymbolPrimitiveCounts
   roundTripComponentNames: string[]
   roundTripCounts: SchematicPrimitiveCounts
   roundTripNetLabelTexts: string[]
@@ -71,6 +90,7 @@ export type SchematicRoundTripMetrics = {
   roundTripPowerPortSymbolNames: string[]
   roundTripPortNames: string[]
   sourceComponentNames: string[]
+  sourceSymbolPrimitiveCounts: SchematicSymbolPrimitiveCounts
   sourceAnnotationSignatures: SchematicAnnotationSignature[]
   sourceCounts: SchematicPrimitiveCounts
   sourceNetLabelTexts: string[]
@@ -126,7 +146,13 @@ function countSchematicPrimitives(
   circuitJson: CircuitElement[],
 ): SchematicPrimitiveCounts {
   const getElementCount = (type: PreservedElementType): number =>
-    circuitJson.filter((element) => element.type === type).length
+    circuitJson.filter(
+      (element) =>
+        element.type === type &&
+        ((type !== "schematic_path" && type !== "schematic_rect") ||
+          (!asString(element.schematic_component_id) &&
+            !asString(element.schematic_symbol_id))),
+    ).length
   let junctionCount = 0
   let wireSegmentCount = 0
   for (const element of circuitJson) {
@@ -157,11 +183,41 @@ function countSchematicPrimitives(
   }
 }
 
+function getSchematicSymbolPrimitiveCounts(
+  circuitJson: CircuitElement[],
+): SchematicSymbolPrimitiveCounts {
+  const counts = Object.fromEntries(
+    schematicSymbolPrimitiveTypes.map((type) => [
+      type,
+      circuitJson.filter(
+        (element) =>
+          element.type === type && asString(element.schematic_symbol_id) !== "",
+      ).length,
+    ]),
+  ) as Record<SchematicSymbolPrimitiveType, number>
+  return {
+    ...counts,
+    filled_path: circuitJson.filter(
+      (element) =>
+        element.type === "schematic_path" &&
+        asString(element.schematic_symbol_id) !== "" &&
+        element.is_filled === true,
+    ).length,
+    total: Object.values(counts).reduce((total, count) => total + count, 0),
+  }
+}
+
 function getSchematicAnnotationSignatures(
   circuitJson: CircuitElement[],
 ): SchematicAnnotationSignature[] {
   const signatures: SchematicAnnotationSignature[] = []
   for (const element of circuitJson) {
+    if (
+      asString(element.schematic_component_id) ||
+      asString(element.schematic_symbol_id)
+    ) {
+      continue
+    }
     if (element.type === "schematic_text") {
       signatures.push({
         anchor: asString(element.anchor),
@@ -240,6 +296,28 @@ function getSchematicGeometryPoints(circuitJson: CircuitElement[]): Point[] {
         points.push(
           { x: center.x - width / 2, y: center.y - height / 2 },
           { x: center.x + width / 2, y: center.y + height / 2 },
+        )
+      }
+      continue
+    }
+    if (element.type === "schematic_line") {
+      points.push(
+        { x: asNumber(element.x1), y: asNumber(element.y1) },
+        { x: asNumber(element.x2), y: asNumber(element.y2) },
+      )
+      continue
+    }
+    if (
+      element.type === "schematic_arc" ||
+      element.type === "schematic_circle"
+    ) {
+      const center = asPoint(element.center)
+      const radius = asNumber(element.radius)
+      if (center) {
+        points.push(
+          center,
+          { x: center.x + radius, y: center.y },
+          { x: center.x, y: center.y + radius },
         )
       }
       continue
@@ -354,6 +432,8 @@ export function getSchematicRoundTripMetrics({
     ),
     roundTripAnnotationSignatures:
       getSchematicAnnotationSignatures(roundTripCircuitJson),
+    roundTripSymbolPrimitiveCounts:
+      getSchematicSymbolPrimitiveCounts(roundTripCircuitJson),
     roundTripComponentNames: getStringFields({
       circuitJson: roundTripCircuitJson,
       elementType: "source_component",
@@ -379,6 +459,8 @@ export function getSchematicRoundTripMetrics({
       elementType: "source_component",
       fieldName: "name",
     }),
+    sourceSymbolPrimitiveCounts:
+      getSchematicSymbolPrimitiveCounts(sourceCircuitJson),
     sourceAnnotationSignatures:
       getSchematicAnnotationSignatures(sourceCircuitJson),
     sourceCounts,
@@ -402,6 +484,7 @@ export function getSchematicRoundTripMetrics({
       sourceCounts.schematic_path +
       sourceCounts.schematic_rect +
       sourceCounts.schematic_text +
+      getSchematicSymbolPrimitiveCounts(sourceCircuitJson).total +
       sourceCounts.wire_segment +
       sourceCounts.junction,
   }

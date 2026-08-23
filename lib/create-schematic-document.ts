@@ -3,6 +3,7 @@ import { createAltiumSchematicNetLabelRecordFields } from "./create-altium-schem
 import { createAltiumSchematicNoConnectRecordFields } from "./create-altium-schematic-no-connect-record-fields"
 import { createAltiumSchematicOffSheetPortRecordFields } from "./create-altium-schematic-off-sheet-port-record-fields"
 import { createAltiumSchematicSheetAnnotationRecordFields } from "./create-altium-schematic-sheet-annotation-record-fields"
+import { createAltiumSchematicSymbolPrimitiveRecordFields } from "./create-altium-schematic-symbol-primitive-record-fields"
 import { createAltiumSchematicSymbolRecords } from "./create-altium-schematic-symbol-records"
 import {
   asNumber,
@@ -14,12 +15,14 @@ import {
   sanitizeField,
 } from "./format"
 import { getSchematicTransform } from "./get-schematic-transform"
+import { isSchematicSymbolPrimitive } from "./is-schematic-symbol-primitive"
 import type {
   CircuitElement,
   Point,
   PointTransform,
   SchematicComponentId,
   SchematicSheetId,
+  SchematicSymbolId,
   SourceComponentId,
   SourcePortId,
 } from "./types"
@@ -64,6 +67,11 @@ type FallbackSchematicBoxBoundsParams = {
   circuitToAltiumSchematicPoint: PointTransform
 }
 
+type SchematicSymbolPrimitiveMaps = {
+  byComponentId: Map<SchematicComponentId, CircuitElement[]>
+  bySymbolId: Map<SchematicSymbolId, CircuitElement[]>
+}
+
 const ALTIUM_PIN_STANDARD_FLAGS = 0x20
 const ALTIUM_PIN_NAME_VISIBLE_FLAG = 0x08
 const ALTIUM_PIN_DESIGNATOR_VISIBLE_FLAG = 0x10
@@ -79,6 +87,70 @@ const PIN_OUTWARD_DIRECTION_BY_FACING_DIRECTION: Record<string, Point> = {
   right: { x: 1, y: 0 },
   up: { x: 0, y: 1 },
   down: { x: 0, y: -1 },
+}
+
+function appendToSchematicPrimitiveMap<OwnerId extends string>({
+  id,
+  map,
+  primitive,
+}: {
+  id: OwnerId
+  map: Map<OwnerId, CircuitElement[]>
+  primitive: CircuitElement
+}): void {
+  if (!id) return
+  map.set(id, [...(map.get(id) ?? []), primitive])
+}
+
+function createSchematicSymbolPrimitiveMaps(
+  schematicElements: CircuitElement[],
+): SchematicSymbolPrimitiveMaps {
+  const maps: SchematicSymbolPrimitiveMaps = {
+    byComponentId: new Map<SchematicComponentId, CircuitElement[]>(),
+    bySymbolId: new Map<SchematicSymbolId, CircuitElement[]>(),
+  }
+  for (const primitive of schematicElements.filter(
+    isSchematicSymbolPrimitive,
+  )) {
+    appendToSchematicPrimitiveMap({
+      id: asString(primitive.schematic_component_id),
+      map: maps.byComponentId,
+      primitive,
+    })
+    appendToSchematicPrimitiveMap({
+      id: asString(primitive.schematic_symbol_id),
+      map: maps.bySymbolId,
+      primitive,
+    })
+  }
+  return maps
+}
+
+function getSchematicSymbolPrimitives({
+  maps,
+  schematicComponent,
+}: {
+  maps: SchematicSymbolPrimitiveMaps
+  schematicComponent: CircuitElement
+}): CircuitElement[] {
+  const schematicComponentId = asString(
+    schematicComponent.schematic_component_id,
+  )
+  const schematicSymbolId = asString(schematicComponent.schematic_symbol_id)
+  const componentPrimitives = (
+    maps.byComponentId.get(schematicComponentId) ?? []
+  ).filter((primitive) => {
+    const primitiveSymbolId = asString(primitive.schematic_symbol_id)
+    return (
+      !schematicSymbolId ||
+      !primitiveSymbolId ||
+      primitiveSymbolId === schematicSymbolId
+    )
+  })
+  if (componentPrimitives.length > 0 || !schematicSymbolId) {
+    return componentPrimitives
+  }
+  return maps.bySymbolId.get(schematicSymbolId) ?? []
 }
 
 function getFallbackSchematicBoxBounds({
@@ -170,6 +242,7 @@ export function createSchematicDocument({
       }),
   )
   const {
+    circuitToAltiumSchematicLength,
     circuitToAltiumSchematicPoint,
     width: altiumSheetWidth,
     height: altiumSheetHeight,
@@ -207,10 +280,18 @@ export function createSchematicDocument({
       sourcePort,
     ]),
   )
+  const schematicSymbols = new Map<SchematicSymbolId, CircuitElement>(
+    byType(circuitJson, "schematic_symbol").map((schematicSymbol) => [
+      asString(schematicSymbol.schematic_symbol_id),
+      schematicSymbol,
+    ]),
+  )
   const schematicPortsByComponentId = new Map<
     SchematicComponentId,
     CircuitElement[]
   >()
+  const schematicSymbolPrimitiveMaps =
+    createSchematicSymbolPrimitiveMaps(schematicElements)
   for (const schematicPort of schematicElements.filter(
     (element) => element.type === "schematic_port",
   )) {
@@ -240,8 +321,13 @@ export function createSchematicDocument({
     const componentComment = sanitizeField(
       schematicComponent.symbol_display_value,
     )
+    const schematicSymbol = schematicSymbols.get(
+      asString(schematicComponent.schematic_symbol_id),
+    )
     const libraryReference =
-      sanitizeField(schematicComponent.symbol_name) || designator
+      sanitizeField(schematicSymbol?.name) ||
+      sanitizeField(schematicComponent.symbol_name) ||
+      designator
     const altiumComponentRecordIndex = addSchematicRecord(
       [
         "RECORD=1",
@@ -267,13 +353,35 @@ export function createSchematicDocument({
       circuitComponentWidth,
       circuitToAltiumSchematicPoint,
     })
-    const schematicSymbolRecords = createAltiumSchematicSymbolRecords({
-      altiumComponentRecordIndex,
-      circuitComponentCenter,
-      circuitToAltiumSchematicPoint,
-      symbolName: asString(schematicComponent.symbol_name),
+    const schematicComponentId = asString(
+      schematicComponent.schematic_component_id,
+    )
+    const customSymbolPrimitiveRecordFields = getSchematicSymbolPrimitives({
+      maps: schematicSymbolPrimitiveMaps,
+      schematicComponent,
+    }).flatMap((graphic) => {
+      const recordFields = createAltiumSchematicSymbolPrimitiveRecordFields({
+        altiumComponentRecordIndex,
+        circuitToAltiumSchematicLength,
+        circuitToAltiumSchematicPoint,
+        graphic,
+      })
+      return recordFields ? [recordFields] : []
     })
-    if (schematicSymbolRecords) {
+    const schematicSymbolRecords =
+      customSymbolPrimitiveRecordFields.length === 0
+        ? createAltiumSchematicSymbolRecords({
+            altiumComponentRecordIndex,
+            circuitComponentCenter,
+            circuitToAltiumSchematicPoint,
+            symbolName: asString(schematicComponent.symbol_name),
+          })
+        : undefined
+    if (customSymbolPrimitiveRecordFields.length > 0) {
+      for (const primitiveRecordFields of customSymbolPrimitiveRecordFields) {
+        addSchematicRecord(primitiveRecordFields, schematicRecordContext)
+      }
+    } else if (schematicSymbolRecords) {
       for (const graphicRecordFields of schematicSymbolRecords.graphicRecordFields) {
         addSchematicRecord(graphicRecordFields, schematicRecordContext)
       }
@@ -332,9 +440,6 @@ export function createSchematicDocument({
       schematicRecordContext,
     )
 
-    const schematicComponentId = asString(
-      schematicComponent.schematic_component_id,
-    )
     const schematicPorts =
       schematicPortsByComponentId.get(schematicComponentId) ?? []
     for (const [pinIndex, schematicPort] of schematicPorts.entries()) {
