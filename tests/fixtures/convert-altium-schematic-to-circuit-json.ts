@@ -6,6 +6,7 @@ import {
   AltiumSchPinRecord,
   type AltiumSchPowerPortRecord,
   getSchematicRecordPoints,
+  resolveSchematicParameterReference,
 } from "altiumts"
 import type {
   CircuitElement,
@@ -122,10 +123,11 @@ function appendUnownedVisibleParameterTextElements(
   elements: CircuitElement[],
 ): void {
   for (const [recordIndex, record] of document.records.entries()) {
-    const text = record.getDecoded("TEXT") ?? record.getDecoded("NAME") ?? ""
+    const sourceText =
+      record.getDecoded("TEXT") ?? record.getDecoded("NAME") ?? ""
     if (
       record.recordKind !== "41" ||
-      !text ||
+      !sourceText ||
       record.getBoolean("ISHIDDEN") === true ||
       hasComponentAncestor({ document, record })
     ) {
@@ -136,7 +138,8 @@ function appendUnownedVisibleParameterTextElements(
       elements,
       record,
       schematicTextId: `schematic_text_unowned_parameter_${recordIndex}`,
-      text,
+      text:
+        resolveSchematicParameterReference(document, sourceText) ?? sourceText,
     })
   }
 }

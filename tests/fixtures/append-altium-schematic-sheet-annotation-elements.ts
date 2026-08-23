@@ -2,6 +2,7 @@ import {
   type AltiumRecord,
   type AltiumSchDoc,
   getSchematicRecordPoints,
+  resolveSchematicParameterReference,
 } from "altiumts"
 import type { CircuitElement } from "../../lib/types"
 import {
@@ -27,8 +28,10 @@ function appendLabelAnnotation({
   elements: CircuitElement[]
   record: AltiumRecord
 }): void {
-  const text = record.getDecoded("TEXT") ?? ""
-  if (!text || record.getBoolean("ISHIDDEN") === true) return
+  const sourceText = record.getDecoded("TEXT") ?? ""
+  if (!sourceText || record.getBoolean("ISHIDDEN") === true) return
+  const text =
+    resolveSchematicParameterReference(document, sourceText) ?? sourceText
   elements.push({
     type: "schematic_text",
     schematic_text_id: `schematic_text_label_${annotationIndex}`,
