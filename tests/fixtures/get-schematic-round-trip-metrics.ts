@@ -13,18 +13,17 @@ const preservedElementTypes = [
   "schematic_text",
 ] as const
 
-const schematicComponentGraphicTypes = [
+const schematicSymbolPrimitiveTypes = [
   "schematic_arc",
   "schematic_circle",
   "schematic_line",
-  "schematic_oval",
   "schematic_path",
   "schematic_rect",
 ] as const
 
 type PreservedElementType = (typeof preservedElementTypes)[number]
-type SchematicComponentGraphicType =
-  (typeof schematicComponentGraphicTypes)[number]
+type SchematicSymbolPrimitiveType =
+  (typeof schematicSymbolPrimitiveTypes)[number]
 
 type CircuitSize = {
   height: number
@@ -39,12 +38,11 @@ export type SchematicPrimitiveCounts = Record<PreservedElementType, number> & {
   wire_segment: number
 }
 
-export type SchematicComponentGraphicCounts = Record<
-  SchematicComponentGraphicType,
+export type SchematicSymbolPrimitiveCounts = Record<
+  SchematicSymbolPrimitiveType,
   number
 > & {
   filled_path: number
-  rounded_rect: number
   total: number
 }
 
@@ -84,7 +82,7 @@ export type SchematicRoundTripMetrics = {
   componentSizeMaxDeltaCircuitUnits: number
   geometryMaxDeltaCircuitUnits: number
   roundTripAnnotationSignatures: SchematicAnnotationSignature[]
-  roundTripComponentGraphicCounts: SchematicComponentGraphicCounts
+  roundTripSymbolPrimitiveCounts: SchematicSymbolPrimitiveCounts
   roundTripComponentNames: string[]
   roundTripCounts: SchematicPrimitiveCounts
   roundTripNetLabelTexts: string[]
@@ -92,7 +90,7 @@ export type SchematicRoundTripMetrics = {
   roundTripPowerPortSymbolNames: string[]
   roundTripPortNames: string[]
   sourceComponentNames: string[]
-  sourceComponentGraphicCounts: SchematicComponentGraphicCounts
+  sourceSymbolPrimitiveCounts: SchematicSymbolPrimitiveCounts
   sourceAnnotationSignatures: SchematicAnnotationSignature[]
   sourceCounts: SchematicPrimitiveCounts
   sourceNetLabelTexts: string[]
@@ -185,32 +183,25 @@ function countSchematicPrimitives(
   }
 }
 
-function getSchematicComponentGraphicCounts(
+function getSchematicSymbolPrimitiveCounts(
   circuitJson: CircuitElement[],
-): SchematicComponentGraphicCounts {
+): SchematicSymbolPrimitiveCounts {
   const counts = Object.fromEntries(
-    schematicComponentGraphicTypes.map((type) => [
+    schematicSymbolPrimitiveTypes.map((type) => [
       type,
       circuitJson.filter(
         (element) =>
-          element.type === type &&
-          asString(element.schematic_component_id) !== "",
+          element.type === type && asString(element.schematic_symbol_id) !== "",
       ).length,
     ]),
-  ) as Record<SchematicComponentGraphicType, number>
+  ) as Record<SchematicSymbolPrimitiveType, number>
   return {
     ...counts,
     filled_path: circuitJson.filter(
       (element) =>
         element.type === "schematic_path" &&
-        asString(element.schematic_component_id) !== "" &&
+        asString(element.schematic_symbol_id) !== "" &&
         element.is_filled === true,
-    ).length,
-    rounded_rect: circuitJson.filter(
-      (element) =>
-        element.type === "schematic_rect" &&
-        asString(element.schematic_component_id) !== "" &&
-        element.corner_radius !== undefined,
     ).length,
     total: Object.values(counts).reduce((total, count) => total + count, 0),
   }
@@ -331,19 +322,6 @@ function getSchematicGeometryPoints(circuitJson: CircuitElement[]): Point[] {
       }
       continue
     }
-    if (element.type === "schematic_oval") {
-      const center = asPoint(element.center)
-      const radiusX = asNumber(element.radius_x)
-      const radiusY = asNumber(element.radius_y)
-      if (center) {
-        points.push(
-          center,
-          { x: center.x + radiusX, y: center.y },
-          { x: center.x, y: center.y + radiusY },
-        )
-      }
-      continue
-    }
     if (element.type === "schematic_path") {
       if (Array.isArray(element.points)) {
         for (const point of element.points) {
@@ -454,8 +432,8 @@ export function getSchematicRoundTripMetrics({
     ),
     roundTripAnnotationSignatures:
       getSchematicAnnotationSignatures(roundTripCircuitJson),
-    roundTripComponentGraphicCounts:
-      getSchematicComponentGraphicCounts(roundTripCircuitJson),
+    roundTripSymbolPrimitiveCounts:
+      getSchematicSymbolPrimitiveCounts(roundTripCircuitJson),
     roundTripComponentNames: getStringFields({
       circuitJson: roundTripCircuitJson,
       elementType: "source_component",
@@ -481,8 +459,8 @@ export function getSchematicRoundTripMetrics({
       elementType: "source_component",
       fieldName: "name",
     }),
-    sourceComponentGraphicCounts:
-      getSchematicComponentGraphicCounts(sourceCircuitJson),
+    sourceSymbolPrimitiveCounts:
+      getSchematicSymbolPrimitiveCounts(sourceCircuitJson),
     sourceAnnotationSignatures:
       getSchematicAnnotationSignatures(sourceCircuitJson),
     sourceCounts,
@@ -506,7 +484,7 @@ export function getSchematicRoundTripMetrics({
       sourceCounts.schematic_path +
       sourceCounts.schematic_rect +
       sourceCounts.schematic_text +
-      getSchematicComponentGraphicCounts(sourceCircuitJson).total +
+      getSchematicSymbolPrimitiveCounts(sourceCircuitJson).total +
       sourceCounts.wire_segment +
       sourceCounts.junction,
   }

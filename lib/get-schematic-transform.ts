@@ -1,8 +1,8 @@
 import type { Matrix } from "transformation-matrix"
 import { applyToPoint, compose, scale, translate } from "transformation-matrix"
-import { asNumber, asPoint, isCircuitElement } from "./format"
-import { isSchematicComponentGraphic } from "./is-schematic-component-graphic"
+import { asNumber, asPoint, asString, isCircuitElement } from "./format"
 import { isSchematicSheetAnnotation } from "./is-schematic-sheet-annotation"
+import { isSchematicSymbolPrimitive } from "./is-schematic-symbol-primitive"
 import type {
   CircuitElement,
   LengthTransform,
@@ -25,7 +25,7 @@ function getAltiumSchematicPoint(
   return { x: Math.round(altiumPoint.x), y: Math.round(altiumPoint.y) }
 }
 
-function appendSchematicComponentGraphicPoints({
+function appendSchematicSymbolPrimitivePoints({
   element,
   points,
 }: {
@@ -65,14 +65,6 @@ function appendSchematicComponentGraphicPoints({
     )
     return
   }
-  if (element.type === "schematic_oval") {
-    const radiusX = asNumber(element.radius_x)
-    const radiusY = asNumber(element.radius_y)
-    points.push(
-      { x: center.x - radiusX, y: center.y - radiusY },
-      { x: center.x + radiusX, y: center.y + radiusY },
-    )
-  }
 }
 
 export function getSchematicTransform(
@@ -82,8 +74,12 @@ export function getSchematicTransform(
   for (const element of schematicElements) {
     const center = asPoint(element.center)
     if (center) circuitPoints.push(center)
-    if (isSchematicComponentGraphic(element)) {
-      appendSchematicComponentGraphicPoints({
+    if (
+      isSchematicSymbolPrimitive(element) &&
+      (asString(element.schematic_symbol_id) ||
+        asString(element.schematic_component_id))
+    ) {
+      appendSchematicSymbolPrimitivePoints({
         element,
         points: circuitPoints,
       })

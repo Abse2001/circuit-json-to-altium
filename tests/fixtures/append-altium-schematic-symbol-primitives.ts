@@ -4,7 +4,11 @@ import {
   type AltiumSchDoc,
   getSchematicRecordPoints,
 } from "altiumts"
-import type { CircuitElement, SchematicComponentId } from "../../lib/types"
+import type {
+  CircuitElement,
+  SchematicComponentId,
+  SchematicSymbolId,
+} from "../../lib/types"
 import {
   getRecordCorner,
   getRecordLocation,
@@ -15,11 +19,12 @@ import {
 import { getCssColorFromAltiumRecord } from "./get-css-color-from-altium-record"
 import { isAltiumSchematicComponentRecordVisible } from "./is-altium-schematic-component-record-visible"
 
-type AppendAltiumSchematicComponentGraphicElementsInput = {
+type AppendAltiumSchematicSymbolPrimitivesInput = {
   component: AltiumSchComponentRecord
   document: AltiumSchDoc
   elements: CircuitElement[]
   schematicComponentId: SchematicComponentId
+  schematicSymbolId: SchematicSymbolId
 }
 
 const COMPONENT_GRAPHIC_RECORD_KINDS = new Set([
@@ -76,10 +81,12 @@ function createPathElement({
   graphicIndex,
   record,
   schematicComponentId,
+  schematicSymbolId,
 }: {
   graphicIndex: number
   record: AltiumRecord
   schematicComponentId: SchematicComponentId
+  schematicSymbolId: SchematicSymbolId
 }): CircuitElement | undefined {
   const points = getSchematicRecordPoints(record).map(toCircuitPoint)
   if (points.length < 2) return undefined
@@ -88,6 +95,7 @@ function createPathElement({
     type: "schematic_path",
     schematic_path_id: `schematic_path_component_${graphicIndex}`,
     schematic_component_id: schematicComponentId,
+    schematic_symbol_id: schematicSymbolId,
     points,
     ...getGraphicStroke(record),
     stroke_color: getGraphicColor(record),
@@ -104,28 +112,31 @@ function createPathElement({
   }
 }
 
-function createOvalElement({
+function createCircleElement({
   graphicIndex,
   record,
   schematicComponentId,
+  schematicSymbolId,
 }: {
   graphicIndex: number
   record: AltiumRecord
   schematicComponentId: SchematicComponentId
-}): CircuitElement {
+  schematicSymbolId: SchematicSymbolId
+}): CircuitElement | undefined {
   const radiusX = getSchematicCoordinate({ key: "RADIUS", record })
   const radiusY = getSchematicCoordinate({
     fallback: radiusX,
     key: "SECONDARYRADIUS",
     record,
   })
+  if (radiusX !== radiusY) return undefined
   return {
-    type: "schematic_oval",
-    schematic_oval_id: `schematic_oval_component_${graphicIndex}`,
+    type: "schematic_circle",
+    schematic_circle_id: `schematic_circle_component_${graphicIndex}`,
     schematic_component_id: schematicComponentId,
+    schematic_symbol_id: schematicSymbolId,
     center: toCircuitPoint(getRecordLocation(record)),
-    radius_x: toCircuitLength(radiusX),
-    radius_y: toCircuitLength(radiusY),
+    radius: toCircuitLength(radiusX),
     ...getGraphicStroke(record),
     color: getGraphicColor(record),
     ...getGraphicFill(record),
@@ -136,10 +147,12 @@ function createArcElement({
   graphicIndex,
   record,
   schematicComponentId,
+  schematicSymbolId,
 }: {
   graphicIndex: number
   record: AltiumRecord
   schematicComponentId: SchematicComponentId
+  schematicSymbolId: SchematicSymbolId
 }): CircuitElement | undefined {
   const radius = getSchematicCoordinate({ key: "RADIUS", record })
   const secondaryRadius = getSchematicCoordinate({
@@ -152,6 +165,7 @@ function createArcElement({
     type: "schematic_arc",
     schematic_arc_id: `schematic_arc_component_${graphicIndex}`,
     schematic_component_id: schematicComponentId,
+    schematic_symbol_id: schematicSymbolId,
     center: toCircuitPoint(getRecordLocation(record)),
     radius: toCircuitLength(radius),
     start_angle_degrees: record.getNumber("STARTANGLE") ?? 0,
@@ -166,10 +180,12 @@ function createLineElement({
   graphicIndex,
   record,
   schematicComponentId,
+  schematicSymbolId,
 }: {
   graphicIndex: number
   record: AltiumRecord
   schematicComponentId: SchematicComponentId
+  schematicSymbolId: SchematicSymbolId
 }): CircuitElement {
   const start = toCircuitPoint(getRecordLocation(record))
   const end = toCircuitPoint(getRecordCorner(record))
@@ -177,6 +193,7 @@ function createLineElement({
     type: "schematic_line",
     schematic_line_id: `schematic_line_component_${graphicIndex}`,
     schematic_component_id: schematicComponentId,
+    schematic_symbol_id: schematicSymbolId,
     x1: start.x,
     y1: start.y,
     x2: end.x,
@@ -190,35 +207,26 @@ function createRectElement({
   graphicIndex,
   record,
   schematicComponentId,
+  schematicSymbolId,
 }: {
   graphicIndex: number
   record: AltiumRecord
   schematicComponentId: SchematicComponentId
-}): CircuitElement | undefined {
+  schematicSymbolId: SchematicSymbolId
+}): CircuitElement {
   const location = getRecordLocation(record)
   const corner = getRecordCorner(record)
-  const isRoundedRect = record.recordKind === "10"
-  const cornerRadiusX = getSchematicCoordinate({
-    key: "CORNERXRADIUS",
-    record,
-  })
-  const cornerRadiusY = getSchematicCoordinate({
-    fallback: cornerRadiusX,
-    key: "CORNERYRADIUS",
-    record,
-  })
-  if (isRoundedRect && cornerRadiusX !== cornerRadiusY) return undefined
   return {
     type: "schematic_rect",
     schematic_rect_id: `schematic_rect_component_${graphicIndex}`,
     schematic_component_id: schematicComponentId,
+    schematic_symbol_id: schematicSymbolId,
     center: toCircuitPoint({
       x: (location.x + corner.x) / 2,
       y: (location.y + corner.y) / 2,
     }),
     width: toCircuitLength(Math.abs(corner.x - location.x)),
     height: toCircuitLength(Math.abs(corner.y - location.y)),
-    ...(isRoundedRect ? { corner_radius: toCircuitLength(cornerRadiusX) } : {}),
     rotation: 0,
     ...getGraphicStroke(record),
     color: getGraphicColor(record),
@@ -226,39 +234,67 @@ function createRectElement({
   }
 }
 
-function createComponentGraphicElement({
+function createSymbolPrimitiveElement({
   graphicIndex,
   record,
   schematicComponentId,
+  schematicSymbolId,
 }: {
   graphicIndex: number
   record: AltiumRecord
   schematicComponentId: SchematicComponentId
+  schematicSymbolId: SchematicSymbolId
 }): CircuitElement | undefined {
   if (record.recordKind === "6" || record.recordKind === "7") {
-    return createPathElement({ graphicIndex, record, schematicComponentId })
+    return createPathElement({
+      graphicIndex,
+      record,
+      schematicComponentId,
+      schematicSymbolId,
+    })
   }
   if (record.recordKind === "8") {
-    return createOvalElement({ graphicIndex, record, schematicComponentId })
+    return createCircleElement({
+      graphicIndex,
+      record,
+      schematicComponentId,
+      schematicSymbolId,
+    })
   }
   if (record.recordKind === "11" || record.recordKind === "12") {
-    return createArcElement({ graphicIndex, record, schematicComponentId })
+    return createArcElement({
+      graphicIndex,
+      record,
+      schematicComponentId,
+      schematicSymbolId,
+    })
   }
   if (record.recordKind === "13") {
-    return createLineElement({ graphicIndex, record, schematicComponentId })
+    return createLineElement({
+      graphicIndex,
+      record,
+      schematicComponentId,
+      schematicSymbolId,
+    })
   }
   if (record.recordKind === "10" || record.recordKind === "14") {
-    return createRectElement({ graphicIndex, record, schematicComponentId })
+    return createRectElement({
+      graphicIndex,
+      record,
+      schematicComponentId,
+      schematicSymbolId,
+    })
   }
   return undefined
 }
 
-export function appendAltiumSchematicComponentGraphicElements({
+export function appendAltiumSchematicSymbolPrimitives({
   component,
   document,
   elements,
   schematicComponentId,
-}: AppendAltiumSchematicComponentGraphicElementsInput): void {
+  schematicSymbolId,
+}: AppendAltiumSchematicSymbolPrimitivesInput): void {
   for (const [graphicIndex, record] of document.records.entries()) {
     if (
       document.getParent(record) !== component ||
@@ -267,10 +303,11 @@ export function appendAltiumSchematicComponentGraphicElements({
     ) {
       continue
     }
-    const graphicElement = createComponentGraphicElement({
+    const graphicElement = createSymbolPrimitiveElement({
       graphicIndex,
       record,
       schematicComponentId,
+      schematicSymbolId,
     })
     if (graphicElement) elements.push(graphicElement)
   }

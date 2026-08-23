@@ -4,7 +4,7 @@ import {
   AltiumSchEllipseRecord,
   AltiumSchLineRecord,
   AltiumSchPolygonRecord,
-  AltiumSchRoundedRectangleRecord,
+  AltiumSchRectangleRecord,
 } from "altiumts"
 import {
   board,
@@ -15,22 +15,28 @@ import {
 } from "./fixtures"
 
 const schematicComponentId = "schematic_component_custom"
+const schematicSymbolId = "schematic_symbol_custom"
 
 const elements: CircuitElement[] = [
   board(),
   sourceComponent("source_component_custom", "U1"),
   {
+    type: "schematic_symbol",
+    schematic_symbol_id: schematicSymbolId,
+    name: "custom_symbol",
+  },
+  {
     type: "schematic_component",
     schematic_component_id: schematicComponentId,
     source_component_id: "source_component_custom",
+    schematic_symbol_id: schematicSymbolId,
     center: { x: 5, y: 5 },
     size: { width: 8, height: 6 },
-    symbol_name: "generic_chip",
   },
   {
     type: "schematic_line",
     schematic_line_id: "schematic_line_custom",
-    schematic_component_id: schematicComponentId,
+    schematic_symbol_id: schematicSymbolId,
     x1: 1,
     y1: 2,
     x2: 3,
@@ -42,7 +48,7 @@ const elements: CircuitElement[] = [
   {
     type: "schematic_path",
     schematic_path_id: "schematic_path_custom",
-    schematic_component_id: schematicComponentId,
+    schematic_symbol_id: schematicSymbolId,
     points: [
       { x: 4, y: 2 },
       { x: 6, y: 2 },
@@ -55,12 +61,11 @@ const elements: CircuitElement[] = [
     is_dashed: false,
   },
   {
-    type: "schematic_oval",
-    schematic_oval_id: "schematic_oval_custom",
-    schematic_component_id: schematicComponentId,
+    type: "schematic_circle",
+    schematic_circle_id: "schematic_circle_custom",
+    schematic_symbol_id: schematicSymbolId,
     center: { x: 8, y: 4 },
-    radius_x: 1.5,
-    radius_y: 0.75,
+    radius: 1.5,
     stroke_width: 0.1,
     color: "#112233",
     fill_color: "#ddeeff",
@@ -70,7 +75,7 @@ const elements: CircuitElement[] = [
   {
     type: "schematic_arc",
     schematic_arc_id: "schematic_arc_custom",
-    schematic_component_id: schematicComponentId,
+    schematic_symbol_id: schematicSymbolId,
     center: { x: 10, y: 5 },
     radius: 2,
     start_angle_degrees: 30,
@@ -83,11 +88,10 @@ const elements: CircuitElement[] = [
   {
     type: "schematic_rect",
     schematic_rect_id: "schematic_rect_custom",
-    schematic_component_id: schematicComponentId,
+    schematic_symbol_id: schematicSymbolId,
     center: { x: 12, y: 5 },
     width: 4,
     height: 2,
-    corner_radius: 0.5,
     rotation: 0,
     stroke_width: 0.1,
     color: "#445566",
@@ -97,7 +101,7 @@ const elements: CircuitElement[] = [
   },
 ]
 
-test("writes custom component graphics as owned native Altium records", async () => {
+test("writes custom symbol primitives as owned native Altium records", async () => {
   const { schematics } = await extractArchive(elements)
   const schematic = schematics[0]
   if (!schematic) throw new Error("Expected a generated schematic")
@@ -113,7 +117,7 @@ test("writes custom component graphics as owned native Altium records", async ()
     (record): record is AltiumSchPolygonRecord =>
       record instanceof AltiumSchPolygonRecord,
   )
-  const oval = ownedRecords.find(
+  const circle = ownedRecords.find(
     (record): record is AltiumSchEllipseRecord =>
       record instanceof AltiumSchEllipseRecord,
   )
@@ -121,9 +125,9 @@ test("writes custom component graphics as owned native Altium records", async ()
     (record): record is AltiumSchArcRecord =>
       record instanceof AltiumSchArcRecord,
   )
-  const roundedRect = ownedRecords.find(
-    (record): record is AltiumSchRoundedRectangleRecord =>
-      record instanceof AltiumSchRoundedRectangleRecord,
+  const rectangle = ownedRecords.find(
+    (record): record is AltiumSchRectangleRecord =>
+      record instanceof AltiumSchRectangleRecord,
   )
 
   expect(line).toMatchObject({ recordKind: "13" })
@@ -134,17 +138,15 @@ test("writes custom component graphics as owned native Altium records", async ()
   expect(polygon?.getNumber("LOCATIONCOUNT")).toBe(3)
   expect(polygon?.getNumber("COLOR")).toBe(0x21_43_65)
   expect(polygon?.getNumber("AREACOLOR")).toBe(0xef_cd_ab)
-  expect(oval).toMatchObject({ recordKind: "8" })
-  expect(oval?.getNumber("RADIUS")).toBe(30)
-  expect(oval?.getNumber("SECONDARYRADIUS")).toBe(15)
+  expect(circle).toMatchObject({ recordKind: "8" })
+  expect(circle?.getNumber("RADIUS")).toBe(30)
+  expect(circle?.getNumber("SECONDARYRADIUS")).toBe(30)
   expect(arc).toMatchObject({ recordKind: "12" })
   expect(arc?.getNumber("STARTANGLE")).toBe(30)
   expect(arc?.getNumber("ENDANGLE")).toBe(120)
-  expect(roundedRect).toMatchObject({ recordKind: "10" })
-  expect(roundedRect?.getNumber("CORNERXRADIUS")).toBe(10)
-  expect(roundedRect?.getNumber("CORNERYRADIUS")).toBe(10)
-  expect(ownedRecords.filter((record) => record.recordKind === "14")).toEqual(
-    [],
-  )
+  expect(rectangle).toMatchObject({ recordKind: "14" })
+  expect(
+    ownedRecords.filter((record) => record.recordKind === "14"),
+  ).toHaveLength(1)
   expectValidSchematic(schematic)
 })

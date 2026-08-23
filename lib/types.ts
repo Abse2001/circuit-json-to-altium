@@ -48,6 +48,7 @@ export type PcbNetName = string
 export type PcbPortId = string
 export type PcbTraceId = string
 export type SchematicComponentId = string
+export type SchematicSymbolId = string
 export type SchematicSheetId = string
 export type SourceComponentId = string
 export type SourceNetId = string

@@ -1,10 +1,10 @@
 import { getAltiumColorFromCss } from "./altium-color"
 import { createOwnedSchematicRecordFields } from "./create-altium-schematic-graphic-record-fields"
 import { asNumber, asPoint, asString, formatNumber } from "./format"
-import { isSchematicComponentGraphic } from "./is-schematic-component-graphic"
+import { isSchematicSymbolPrimitive } from "./is-schematic-symbol-primitive"
 import type { CircuitElement, LengthTransform, PointTransform } from "./types"
 
-type CreateAltiumSchematicComponentGraphicRecordFieldsInput = {
+type CreateAltiumSchematicSymbolPrimitiveRecordFieldsInput = {
   altiumComponentRecordIndex: number
   circuitToAltiumSchematicLength: LengthTransform
   circuitToAltiumSchematicPoint: PointTransform
@@ -64,14 +64,12 @@ function getOwnedGraphicRecordFields({
 
 function getAltiumRadius({
   circuitToAltiumSchematicLength,
-  minimumAltiumRadius = 1,
   radius,
 }: {
   circuitToAltiumSchematicLength: LengthTransform
-  minimumAltiumRadius?: number
   radius: number
 }): number {
-  return Math.max(minimumAltiumRadius, circuitToAltiumSchematicLength(radius))
+  return Math.max(1, circuitToAltiumSchematicLength(radius))
 }
 
 function createPathRecordFields({
@@ -79,7 +77,7 @@ function createPathRecordFields({
   circuitToAltiumSchematicLength,
   circuitToAltiumSchematicPoint,
   graphic,
-}: CreateAltiumSchematicComponentGraphicRecordFieldsInput):
+}: CreateAltiumSchematicSymbolPrimitiveRecordFieldsInput):
   | string[]
   | undefined {
   if (!Array.isArray(graphic.points)) return undefined
@@ -112,18 +110,17 @@ function createPathRecordFields({
   ]
 }
 
-function createOvalRecordFields({
+function createCircleRecordFields({
   altiumComponentRecordIndex,
   circuitToAltiumSchematicLength,
   circuitToAltiumSchematicPoint,
   graphic,
-}: CreateAltiumSchematicComponentGraphicRecordFieldsInput):
+}: CreateAltiumSchematicSymbolPrimitiveRecordFieldsInput):
   | string[]
   | undefined {
   const center = asPoint(graphic.center)
-  const radiusX = asNumber(graphic.radius_x)
-  const radiusY = asNumber(graphic.radius_y)
-  if (!center || radiusX <= 0 || radiusY <= 0) return undefined
+  const radius = asNumber(graphic.radius)
+  if (!center || radius <= 0) return undefined
   const altiumCenter = circuitToAltiumSchematicPoint(center)
   const isFilled = graphic.is_filled === true
   return [
@@ -135,25 +132,12 @@ function createOvalRecordFields({
     }),
     `LOCATION.X=${altiumCenter.x}`,
     `LOCATION.Y=${altiumCenter.y}`,
-    `RADIUS=${formatNumber(getAltiumRadius({ circuitToAltiumSchematicLength, radius: radiusX }))}`,
-    `SECONDARYRADIUS=${formatNumber(getAltiumRadius({ circuitToAltiumSchematicLength, radius: radiusY }))}`,
+    `RADIUS=${formatNumber(getAltiumRadius({ circuitToAltiumSchematicLength, radius }))}`,
+    `SECONDARYRADIUS=${formatNumber(getAltiumRadius({ circuitToAltiumSchematicLength, radius }))}`,
     `COLOR=${getAltiumColor({ graphic, colorFieldName: "color", fallbackAltiumColor: ALTIUM_SCHEMATIC_DEFAULT_COLOR })}`,
     `AREACOLOR=${getAltiumColor({ graphic, colorFieldName: "fill_color", fallbackAltiumColor: ALTIUM_SCHEMATIC_DEFAULT_FILL_COLOR })}`,
     `ISSOLID=${isFilled ? "T" : "F"}`,
   ]
-}
-
-function createCircleRecordFields(
-  input: CreateAltiumSchematicComponentGraphicRecordFieldsInput,
-): string[] | undefined {
-  return createOvalRecordFields({
-    ...input,
-    graphic: {
-      ...input.graphic,
-      radius_x: input.graphic.radius,
-      radius_y: input.graphic.radius,
-    },
-  })
 }
 
 function createArcRecordFields({
@@ -161,7 +145,7 @@ function createArcRecordFields({
   circuitToAltiumSchematicLength,
   circuitToAltiumSchematicPoint,
   graphic,
-}: CreateAltiumSchematicComponentGraphicRecordFieldsInput):
+}: CreateAltiumSchematicSymbolPrimitiveRecordFieldsInput):
   | string[]
   | undefined {
   const center = asPoint(graphic.center)
@@ -192,7 +176,7 @@ function createLineRecordFields({
   circuitToAltiumSchematicLength,
   circuitToAltiumSchematicPoint,
   graphic,
-}: CreateAltiumSchematicComponentGraphicRecordFieldsInput): string[] {
+}: CreateAltiumSchematicSymbolPrimitiveRecordFieldsInput): string[] {
   const altiumStart = circuitToAltiumSchematicPoint({
     x: asNumber(graphic.x1),
     y: asNumber(graphic.y1),
@@ -221,7 +205,7 @@ function createRectRecordFields({
   circuitToAltiumSchematicLength,
   circuitToAltiumSchematicPoint,
   graphic,
-}: CreateAltiumSchematicComponentGraphicRecordFieldsInput):
+}: CreateAltiumSchematicSymbolPrimitiveRecordFieldsInput):
   | string[]
   | undefined {
   const center = asPoint(graphic.center)
@@ -240,16 +224,9 @@ function createRectRecordFields({
     x: center.x + width / 2,
     y: center.y + height / 2,
   })
-  const hasCornerRadius = typeof graphic.corner_radius === "number"
-  const cornerRadius = Math.max(asNumber(graphic.corner_radius), 0)
-  const altiumCornerRadius = getAltiumRadius({
-    circuitToAltiumSchematicLength,
-    minimumAltiumRadius: 0,
-    radius: cornerRadius,
-  })
   const isFilled = graphic.is_filled === true
   return [
-    `RECORD=${hasCornerRadius ? 10 : 14}`,
+    "RECORD=14",
     ...getOwnedGraphicRecordFields({
       altiumComponentRecordIndex,
       circuitToAltiumSchematicLength,
@@ -259,30 +236,21 @@ function createRectRecordFields({
     `LOCATION.Y=${altiumFirstCorner.y}`,
     `CORNER.X=${altiumSecondCorner.x}`,
     `CORNER.Y=${altiumSecondCorner.y}`,
-    ...(hasCornerRadius
-      ? [
-          `CORNERXRADIUS=${formatNumber(altiumCornerRadius)}`,
-          `CORNERYRADIUS=${formatNumber(altiumCornerRadius)}`,
-        ]
-      : []),
     `COLOR=${getAltiumColor({ graphic, colorFieldName: "color", fallbackAltiumColor: ALTIUM_SCHEMATIC_DEFAULT_COLOR })}`,
     `AREACOLOR=${getAltiumColor({ graphic, colorFieldName: "fill_color", fallbackAltiumColor: ALTIUM_SCHEMATIC_DEFAULT_FILL_COLOR })}`,
     `ISSOLID=${isFilled ? "T" : "F"}`,
   ]
 }
 
-export function createAltiumSchematicComponentGraphicRecordFields(
-  input: CreateAltiumSchematicComponentGraphicRecordFieldsInput,
+export function createAltiumSchematicSymbolPrimitiveRecordFields(
+  input: CreateAltiumSchematicSymbolPrimitiveRecordFieldsInput,
 ): string[] | undefined {
-  if (!isSchematicComponentGraphic(input.graphic)) return undefined
+  if (!isSchematicSymbolPrimitive(input.graphic)) return undefined
   if (input.graphic.type === "schematic_path") {
     return createPathRecordFields(input)
   }
   if (input.graphic.type === "schematic_circle") {
     return createCircleRecordFields(input)
-  }
-  if (input.graphic.type === "schematic_oval") {
-    return createOvalRecordFields(input)
   }
   if (input.graphic.type === "schematic_arc") {
     return createArcRecordFields(input)
