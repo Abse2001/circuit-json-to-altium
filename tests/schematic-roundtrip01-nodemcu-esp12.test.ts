@@ -40,7 +40,7 @@ test("round-trips the open-source NodeMCU ESP-12 Altium schematic", async () => 
     path: result.sourceCounts.schematic_path,
     rect: result.sourceCounts.schematic_rect,
     text: result.sourceCounts.schematic_text,
-  }).toEqual({ path: 17, rect: 3, text: 258 })
+  }).toEqual({ path: 17, rect: 3, text: 384 })
   expect(result.sourceSupportedPrimitiveTotal).toBeGreaterThan(300)
   await expect(
     createSideBySideSvg(result.sourceSvg, result.roundTripSvg),

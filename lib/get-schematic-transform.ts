@@ -17,6 +17,8 @@ type SchematicTransform = {
   width: number
 }
 
+const ALTIUM_UNITS_PER_CIRCUIT_UNIT = 20
+
 function getAltiumSchematicPoint(
   circuitPoint: Point,
   circuitToAltiumSchematicMatrix: Matrix,
@@ -136,10 +138,16 @@ export function getSchematicTransform(
     circuitPoints.length > 0
       ? Math.min(...circuitPoints.map((point) => point.y))
       : 0
+  const altiumGridMinX =
+    Math.round(minX * ALTIUM_UNITS_PER_CIRCUIT_UNIT) /
+    ALTIUM_UNITS_PER_CIRCUIT_UNIT
+  const altiumGridMinY =
+    Math.round(minY * ALTIUM_UNITS_PER_CIRCUIT_UNIT) /
+    ALTIUM_UNITS_PER_CIRCUIT_UNIT
   const circuitToAltiumSchematicMatrix = compose(
     translate(100, 100),
-    scale(20, 20),
-    translate(-minX, -minY),
+    scale(ALTIUM_UNITS_PER_CIRCUIT_UNIT, ALTIUM_UNITS_PER_CIRCUIT_UNIT),
+    translate(-altiumGridMinX, -altiumGridMinY),
   )
   const altiumPoints = circuitPoints.map((circuitPoint) =>
     getAltiumSchematicPoint(circuitPoint, circuitToAltiumSchematicMatrix),

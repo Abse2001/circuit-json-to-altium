@@ -43,7 +43,7 @@ test("round-trips the open-source SimpleFOC Shield V3 Altium schematic", async (
     path: result.sourceCounts.schematic_path,
     rect: result.sourceCounts.schematic_rect,
     text: result.sourceCounts.schematic_text,
-  }).toEqual({ path: 0, rect: 9, text: 308 })
+  }).toEqual({ path: 0, rect: 9, text: 381 })
   expect(result.sourceSupportedPrimitiveTotal).toBeGreaterThan(350)
   await expect(
     createSideBySideSvg(result.sourceSvg, result.roundTripSvg),
