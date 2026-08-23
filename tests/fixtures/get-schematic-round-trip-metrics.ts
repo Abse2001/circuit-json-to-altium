@@ -78,10 +78,25 @@ export type SchematicAnnotationSignature =
       type: "schematic_path"
     }
 
+export type SchematicComponentTextSignature = {
+  anchor: string
+  color: string
+  fontSizeCircuitUnits: number
+  rotationDegrees: number
+  text: string
+}
+
+export type SchematicPortTextPresentation = {
+  fontSizeCircuitUnits: number
+  isPinNameVisible: boolean
+  isPinNumberVisible: boolean
+}
+
 export type SchematicRoundTripMetrics = {
   componentSizeMaxDeltaCircuitUnits: number
   geometryMaxDeltaCircuitUnits: number
   roundTripAnnotationSignatures: SchematicAnnotationSignature[]
+  roundTripComponentTextSignatures: SchematicComponentTextSignature[]
   roundTripSymbolPrimitiveCounts: SchematicSymbolPrimitiveCounts
   roundTripComponentNames: string[]
   roundTripCounts: SchematicPrimitiveCounts
@@ -89,15 +104,57 @@ export type SchematicRoundTripMetrics = {
   roundTripOffSheetPortSignatures: SchematicOffSheetPortSignature[]
   roundTripPowerPortSymbolNames: string[]
   roundTripPortNames: string[]
+  roundTripPortTextPresentations: SchematicPortTextPresentation[]
   sourceComponentNames: string[]
   sourceSymbolPrimitiveCounts: SchematicSymbolPrimitiveCounts
   sourceAnnotationSignatures: SchematicAnnotationSignature[]
+  sourceComponentTextSignatures: SchematicComponentTextSignature[]
   sourceCounts: SchematicPrimitiveCounts
   sourceNetLabelTexts: string[]
   sourceOffSheetPortSignatures: SchematicOffSheetPortSignature[]
   sourcePowerPortSymbolNames: string[]
   sourcePortNames: string[]
+  sourcePortTextPresentations: SchematicPortTextPresentation[]
   sourceSupportedPrimitiveTotal: number
+}
+
+function getSchematicComponentTextSignatures(
+  circuitJson: CircuitElement[],
+): SchematicComponentTextSignature[] {
+  return circuitJson.flatMap((element) => {
+    if (
+      element.type !== "schematic_text" ||
+      !asString(element.schematic_component_id)
+    ) {
+      return []
+    }
+    return [
+      {
+        anchor: asString(element.anchor),
+        color: asString(element.color),
+        fontSizeCircuitUnits: asNumber(element.font_size),
+        rotationDegrees: asNumber(element.rotation),
+        text: asString(element.text),
+      },
+    ]
+  })
+}
+
+function getSchematicPortTextPresentations(
+  circuitJson: CircuitElement[],
+): SchematicPortTextPresentation[] {
+  return circuitJson.flatMap((element) =>
+    element.type === "schematic_port" &&
+    asString(element.schematic_component_id)
+      ? [
+          {
+            fontSizeCircuitUnits: asNumber(element.pin_text_font_size),
+            isPinNameVisible: element.is_pin_name_visible === true,
+            isPinNumberVisible: element.is_pin_number_visible === true,
+          },
+        ]
+      : [],
+  )
 }
 
 function getOffSheetPortSignatures(
@@ -432,6 +489,8 @@ export function getSchematicRoundTripMetrics({
     ),
     roundTripAnnotationSignatures:
       getSchematicAnnotationSignatures(roundTripCircuitJson),
+    roundTripComponentTextSignatures:
+      getSchematicComponentTextSignatures(roundTripCircuitJson),
     roundTripSymbolPrimitiveCounts:
       getSchematicSymbolPrimitiveCounts(roundTripCircuitJson),
     roundTripComponentNames: getStringFields({
@@ -454,6 +513,8 @@ export function getSchematicRoundTripMetrics({
       elementType: "source_port",
       fieldName: "name",
     }),
+    roundTripPortTextPresentations:
+      getSchematicPortTextPresentations(roundTripCircuitJson),
     sourceComponentNames: getStringFields({
       circuitJson: sourceCircuitJson,
       elementType: "source_component",
@@ -463,6 +524,8 @@ export function getSchematicRoundTripMetrics({
       getSchematicSymbolPrimitiveCounts(sourceCircuitJson),
     sourceAnnotationSignatures:
       getSchematicAnnotationSignatures(sourceCircuitJson),
+    sourceComponentTextSignatures:
+      getSchematicComponentTextSignatures(sourceCircuitJson),
     sourceCounts,
     sourceNetLabelTexts: getStringFields({
       circuitJson: sourceCircuitJson,
@@ -476,6 +539,8 @@ export function getSchematicRoundTripMetrics({
       elementType: "source_port",
       fieldName: "name",
     }),
+    sourcePortTextPresentations:
+      getSchematicPortTextPresentations(sourceCircuitJson),
     sourceSupportedPrimitiveTotal:
       sourceCounts.schematic_component +
       sourceCounts.do_not_connect +
