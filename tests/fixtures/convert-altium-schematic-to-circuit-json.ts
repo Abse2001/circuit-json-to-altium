@@ -23,6 +23,7 @@ import {
 import { appendAltiumSchematicComponentTextElements } from "./append-altium-schematic-component-text-elements"
 import { appendAltiumSchematicPinTextElements } from "./append-altium-schematic-pin-text-elements"
 import { appendAltiumSchematicSheetAnnotationElements } from "./append-altium-schematic-sheet-annotation-elements"
+import { appendAltiumSchematicSheetElements } from "./append-altium-schematic-sheet-elements"
 import { appendAltiumSchematicSymbolPrimitives } from "./append-altium-schematic-symbol-primitives"
 import { applyAltiumNoConnectToSourcePorts } from "./apply-altium-no-connect-to-source-ports"
 import { getAltiumSchematicTextPresentation } from "./get-altium-schematic-text-presentation"
@@ -659,6 +660,7 @@ export function convertAltiumSchematicToCircuitJson(
   appendNetLabelElements(document, elements)
   appendUnownedVisibleParameterTextElements(document, elements)
   applyAltiumNoConnectToSourcePorts({ document, elements })
+  appendAltiumSchematicSheetElements(document, elements)
   appendAltiumSchematicSheetAnnotationElements(document, elements)
   return elements
 }
