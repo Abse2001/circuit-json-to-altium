@@ -10,42 +10,11 @@ import {
   toCircuitLength,
   toCircuitPoint,
 } from "./altium-schematic-coordinate-utils"
-import {
-  getAltiumSchematicFont,
-  getAltiumSchematicTextFrameLines,
-  type SchematicTextAnchor,
-} from "./get-altium-schematic-text-frame-lines"
+import { getAltiumSchematicTextFrameLines } from "./get-altium-schematic-text-frame-lines"
+import { getAltiumSchematicTextPresentation } from "./get-altium-schematic-text-presentation"
 import { getCssColorFromAltiumRecord } from "./get-css-color-from-altium-record"
 
 const ANNOTATION_RECORD_KINDS = new Set(["4", "6", "7", "10", "14", "28"])
-
-const SCHEMATIC_TEXT_ANCHORS: SchematicTextAnchor[][] = [
-  ["bottom_left", "bottom_center", "bottom_right"],
-  ["center_left", "center", "center_right"],
-  ["top_left", "top_center", "top_right"],
-]
-
-function getSchematicTextAnchor(record: AltiumRecord): SchematicTextAnchor {
-  const justification = Math.min(
-    Math.max(Math.round(record.getNumber("JUSTIFICATION") ?? 0), 0),
-    8,
-  )
-  const orientation =
-    ((Math.round(record.getNumber("ORIENTATION") ?? 0) % 4) + 4) % 4
-  const rowIndex = Math.floor(justification / 3)
-  const originalColumnIndex = justification % 3
-  const columnIndex =
-    orientation === 2 || orientation === 3
-      ? 2 - originalColumnIndex
-      : originalColumnIndex
-  return SCHEMATIC_TEXT_ANCHORS[rowIndex]?.[columnIndex] ?? "bottom_left"
-}
-
-function getSchematicTextRotationDegrees(record: AltiumRecord): number {
-  const orientation =
-    ((Math.round(record.getNumber("ORIENTATION") ?? 0) % 4) + 4) % 4
-  return orientation === 1 || orientation === 3 ? -90 : 0
-}
 
 function appendLabelAnnotation({
   annotationIndex,
@@ -60,22 +29,13 @@ function appendLabelAnnotation({
 }): void {
   const text = record.getDecoded("TEXT") ?? ""
   if (!text || record.getBoolean("ISHIDDEN") === true) return
-  const font = getAltiumSchematicFont({
-    document,
-    fallbackSizePoints: 9,
-    record,
-  })
   elements.push({
     type: "schematic_text",
     schematic_text_id: `schematic_text_label_${annotationIndex}`,
     text,
-    font_size: toCircuitLength(font.sizePoints),
-    position: toCircuitPoint(getRecordLocation(record)),
-    rotation: getSchematicTextRotationDegrees(record),
-    anchor: getSchematicTextAnchor(record),
-    color: getCssColorFromAltiumRecord({
-      fallbackCssColor: "#1f2937",
-      fieldNames: ["COLOR"],
+    ...getAltiumSchematicTextPresentation({
+      document,
+      fallbackFontSizePoints: 9,
       record,
     }),
   })

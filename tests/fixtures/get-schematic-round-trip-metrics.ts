@@ -30,6 +30,10 @@ type CircuitSize = {
   width: number
 }
 
+function roundToAltiumSchematicGrid(coordinate: number): number {
+  return Math.round(coordinate * 20) / 20
+}
+
 export type SchematicPrimitiveCounts = Record<PreservedElementType, number> & {
   do_not_connect: number
   junction: number
@@ -78,10 +82,20 @@ export type SchematicAnnotationSignature =
       type: "schematic_path"
     }
 
+export type SchematicComponentTextSignature = {
+  anchor: string
+  color: string
+  fontSizeCircuitUnits: number
+  positionRelativeToFirstText: Point
+  rotationDegrees: number
+  text: string
+}
+
 export type SchematicRoundTripMetrics = {
   componentSizeMaxDeltaCircuitUnits: number
   geometryMaxDeltaCircuitUnits: number
   roundTripAnnotationSignatures: SchematicAnnotationSignature[]
+  roundTripComponentTextSignatures: SchematicComponentTextSignature[]
   roundTripSymbolPrimitiveCounts: SchematicSymbolPrimitiveCounts
   roundTripComponentNames: string[]
   roundTripCounts: SchematicPrimitiveCounts
@@ -92,12 +106,47 @@ export type SchematicRoundTripMetrics = {
   sourceComponentNames: string[]
   sourceSymbolPrimitiveCounts: SchematicSymbolPrimitiveCounts
   sourceAnnotationSignatures: SchematicAnnotationSignature[]
+  sourceComponentTextSignatures: SchematicComponentTextSignature[]
   sourceCounts: SchematicPrimitiveCounts
   sourceNetLabelTexts: string[]
   sourceOffSheetPortSignatures: SchematicOffSheetPortSignature[]
   sourcePowerPortSymbolNames: string[]
   sourcePortNames: string[]
   sourceSupportedPrimitiveTotal: number
+}
+
+function getSchematicComponentTextSignatures(
+  circuitJson: CircuitElement[],
+): SchematicComponentTextSignature[] {
+  const componentTexts = circuitJson.filter(
+    (element) =>
+      element.type === "schematic_text" &&
+      Boolean(asString(element.schematic_component_id)),
+  )
+  const firstTextPosition = asPoint(componentTexts[0]?.position) ?? {
+    x: 0,
+    y: 0,
+  }
+  return componentTexts.map((element) => {
+    const position = asPoint(element.position) ?? { x: 0, y: 0 }
+    return {
+      anchor: asString(element.anchor),
+      color: asString(element.color),
+      fontSizeCircuitUnits: asNumber(element.font_size),
+      positionRelativeToFirstText: {
+        x: roundToAltiumSchematicGrid(
+          roundToAltiumSchematicGrid(position.x) -
+            roundToAltiumSchematicGrid(firstTextPosition.x),
+        ),
+        y: roundToAltiumSchematicGrid(
+          roundToAltiumSchematicGrid(position.y) -
+            roundToAltiumSchematicGrid(firstTextPosition.y),
+        ),
+      },
+      rotationDegrees: asNumber(element.rotation),
+      text: asString(element.text),
+    }
+  })
 }
 
 function getOffSheetPortSignatures(
@@ -284,6 +333,7 @@ function getSchematicGeometryPoints(circuitJson: CircuitElement[]): Point[] {
       continue
     }
     if (element.type === "schematic_text") {
+      if (asString(element.schematic_component_id)) continue
       const position = asPoint(element.position)
       if (position) points.push(position)
       continue
@@ -432,6 +482,8 @@ export function getSchematicRoundTripMetrics({
     ),
     roundTripAnnotationSignatures:
       getSchematicAnnotationSignatures(roundTripCircuitJson),
+    roundTripComponentTextSignatures:
+      getSchematicComponentTextSignatures(roundTripCircuitJson),
     roundTripSymbolPrimitiveCounts:
       getSchematicSymbolPrimitiveCounts(roundTripCircuitJson),
     roundTripComponentNames: getStringFields({
@@ -463,6 +515,8 @@ export function getSchematicRoundTripMetrics({
       getSchematicSymbolPrimitiveCounts(sourceCircuitJson),
     sourceAnnotationSignatures:
       getSchematicAnnotationSignatures(sourceCircuitJson),
+    sourceComponentTextSignatures:
+      getSchematicComponentTextSignatures(sourceCircuitJson),
     sourceCounts,
     sourceNetLabelTexts: getStringFields({
       circuitJson: sourceCircuitJson,

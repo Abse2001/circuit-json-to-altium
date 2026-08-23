@@ -18,6 +18,9 @@ test("round-trips the open-source HERON systems PCB Altium schematic", async () 
   expect(result.roundTripAnnotationSignatures).toEqual(
     result.sourceAnnotationSignatures,
   )
+  expect(result.roundTripComponentTextSignatures).toEqual(
+    result.sourceComponentTextSignatures,
+  )
   expect(result.roundTripOffSheetPortSignatures).toEqual(
     result.sourceOffSheetPortSignatures,
   )
@@ -37,7 +40,7 @@ test("round-trips the open-source HERON systems PCB Altium schematic", async () 
     path: result.sourceCounts.schematic_path,
     rect: result.sourceCounts.schematic_rect,
     text: result.sourceCounts.schematic_text,
-  }).toEqual({ path: 0, rect: 9, text: 29 })
+  }).toEqual({ path: 0, rect: 9, text: 420 })
   expect(result.sourceSupportedPrimitiveTotal).toBeGreaterThan(300)
   await expect(
     createSideBySideSvg(result.sourceSvg, result.roundTripSvg),
