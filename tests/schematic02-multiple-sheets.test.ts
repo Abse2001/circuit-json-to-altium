@@ -122,6 +122,32 @@ test("creates a root schematic with sorted child sheet links", async () => {
     ),
   ).toEqual([["VIN", "VOUT"], ["DATA"]])
   expect(
+    rootSchematic.sheetLinks.map(({ symbol }) => ({
+      areaColor: symbol.getNumber("AREACOLOR"),
+      color: symbol.getNumber("COLOR"),
+      isSolid: symbol.getBoolean("ISSOLID"),
+    })),
+  ).toEqual([
+    { areaColor: 16_777_215, color: 136, isSolid: false },
+    { areaColor: 16_777_215, color: 136, isSolid: false },
+  ])
+  expect(
+    rootSchematic.sheetLinks.flatMap(({ symbol }) =>
+      rootSchematic
+        .getOwnedRecords(symbol)
+        .filter((record) => record.recordKind === "16")
+        .map((record) => ({
+          areaColor: record.getNumber("AREACOLOR"),
+          color: record.getNumber("COLOR"),
+          textColor: record.getNumber("TEXTCOLOR"),
+        })),
+    ),
+  ).toEqual([
+    { areaColor: 16_777_215, color: 136, textColor: 136 },
+    { areaColor: 16_777_215, color: 136, textColor: 136 },
+    { areaColor: 16_777_215, color: 136, textColor: 136 },
+  ])
+  expect(
     schematicByFilename
       .get("multi-01.SchDoc")
       ?.components.map((component) => component.get("UNIQUEID")),

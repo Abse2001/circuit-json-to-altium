@@ -43,6 +43,8 @@ type CreateAltiumSchematicSheetSymbolRecordFieldsParams = {
 const ALTIUM_SHEET_ENTRY_SPACING = 10
 const ALTIUM_SHEET_SYMBOL_MINIMUM_HEIGHT = 60
 const ALTIUM_SHEET_SYMBOL_MINIMUM_WIDTH = 160
+const ALTIUM_SCHEMATIC_COMPONENT_OUTLINE_COLOR = 136
+const ALTIUM_SCHEMATIC_COMPONENT_FILL_COLOR = 16_777_215
 
 export function createAltiumSchematicSheetSymbolPlans({
   childSheets,
@@ -161,9 +163,9 @@ export function createAltiumSchematicSheetSymbolOwnedRecordFields({
       "OWNERPARTID=-1",
       ...(entry.side === 1 ? ["SIDE=1"] : []),
       `DISTANCEFROMTOP=${entry.distanceFromTop}`,
-      "COLOR=128",
-      "AREACOLOR=8454143",
-      "TEXTCOLOR=128",
+      `COLOR=${ALTIUM_SCHEMATIC_COMPONENT_OUTLINE_COLOR}`,
+      `AREACOLOR=${ALTIUM_SCHEMATIC_COMPONENT_FILL_COLOR}`,
+      `TEXTCOLOR=${ALTIUM_SCHEMATIC_COMPONENT_OUTLINE_COLOR}`,
       "TEXTFONTID=1",
       "TEXTSTYLE=Full",
       `NAME=${sanitizeField(entry.name)}`,
@@ -187,9 +189,9 @@ export function createAltiumSchematicSheetSymbolRecordFields({
     `LOCATION.Y=${location.y}`,
     `XSIZE=${plan.width}`,
     `YSIZE=${plan.height}`,
-    "COLOR=128",
-    "AREACOLOR=8454016",
-    "ISSOLID=T",
+    `COLOR=${ALTIUM_SCHEMATIC_COMPONENT_OUTLINE_COLOR}`,
+    `AREACOLOR=${ALTIUM_SCHEMATIC_COMPONENT_FILL_COLOR}`,
+    "ISSOLID=F",
     `UNIQUEID=${sanitizeField(plan.childSheet.schematicSheetId)}`,
     "SYMBOLTYPE=Normal",
   ]
