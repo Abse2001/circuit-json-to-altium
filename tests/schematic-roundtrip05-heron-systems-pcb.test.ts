@@ -18,6 +18,14 @@ test("round-trips the open-source HERON systems PCB Altium schematic", async () 
   expect(result.roundTripAnnotationSignatures).toEqual(
     result.sourceAnnotationSignatures,
   )
+  const sourceSheetText = result.sourceAnnotationSignatures.flatMap(
+    (annotation) =>
+      annotation.type === "schematic_text" ? [annotation.text] : [],
+  )
+  expect(sourceSheetText).toContain("1")
+  expect(sourceSheetText).toContain("5")
+  expect(sourceSheetText).not.toContain("=SheetNumber")
+  expect(sourceSheetText).not.toContain("=SheetTotal")
   expect(result.roundTripComponentTextSignatures).toEqual(
     result.sourceComponentTextSignatures,
   )

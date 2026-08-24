@@ -18,6 +18,14 @@ test("round-trips the open-source HERON PAY-SSM Altium schematic", async () => {
   expect(result.roundTripAnnotationSignatures).toEqual(
     result.sourceAnnotationSignatures,
   )
+  const sourceSheetText = result.sourceAnnotationSignatures.flatMap(
+    (annotation) =>
+      annotation.type === "schematic_text" ? [annotation.text] : [],
+  )
+  expect(sourceSheetText).toContain("v4.3")
+  expect(sourceSheetText).toContain("Lorna Lan, Dylan Vogel")
+  expect(sourceSheetText).not.toContain("=REVISION")
+  expect(sourceSheetText).not.toContain("=DrawnBy")
   expect(result.roundTripComponentTextSignatures).toEqual(
     result.sourceComponentTextSignatures,
   )
