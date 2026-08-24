@@ -191,7 +191,7 @@ export function createAltiumSchematicSheetSymbolRecordFields({
     `YSIZE=${plan.height}`,
     `COLOR=${ALTIUM_SCHEMATIC_COMPONENT_OUTLINE_COLOR}`,
     `AREACOLOR=${ALTIUM_SCHEMATIC_COMPONENT_FILL_COLOR}`,
-    "ISSOLID=F",
+    "ISSOLID=T",
     `UNIQUEID=${sanitizeField(plan.childSheet.schematicSheetId)}`,
     "SYMBOLTYPE=Normal",
   ]

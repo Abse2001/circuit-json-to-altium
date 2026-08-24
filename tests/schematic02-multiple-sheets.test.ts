@@ -128,8 +128,8 @@ test("creates a root schematic with sorted child sheet links", async () => {
       isSolid: symbol.getBoolean("ISSOLID"),
     })),
   ).toEqual([
-    { areaColor: 16_777_215, color: 136, isSolid: false },
-    { areaColor: 16_777_215, color: 136, isSolid: false },
+    { areaColor: 16_777_215, color: 136, isSolid: true },
+    { areaColor: 16_777_215, color: 136, isSolid: true },
   ])
   expect(
     rootSchematic.sheetLinks.flatMap(({ symbol }) =>
