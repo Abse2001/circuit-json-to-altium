@@ -4,6 +4,12 @@ import { createAltiumSchematicNetLabelRecordFields } from "./create-altium-schem
 import { createAltiumSchematicNoConnectRecordFields } from "./create-altium-schematic-no-connect-record-fields"
 import { createAltiumSchematicOffSheetPortRecordFields } from "./create-altium-schematic-off-sheet-port-record-fields"
 import { createAltiumSchematicSheetAnnotationRecordFields } from "./create-altium-schematic-sheet-annotation-record-fields"
+import {
+  type AltiumSchematicChildSheet,
+  createAltiumSchematicSheetSymbolOwnedRecordFields,
+  createAltiumSchematicSheetSymbolPlans,
+  createAltiumSchematicSheetSymbolRecordFields,
+} from "./create-altium-schematic-sheet-symbol-records"
 import { createAltiumSchematicSymbolPrimitiveRecordFields } from "./create-altium-schematic-symbol-primitive-record-fields"
 import { createAltiumSchematicSymbolRecords } from "./create-altium-schematic-symbol-records"
 import { createAltiumSchematicTextRecordFields } from "./create-altium-schematic-text-record-fields"
@@ -33,14 +39,15 @@ import type {
 } from "./types"
 
 type CreateSchematicDocumentParams = {
+  childSheets?: AltiumSchematicChildSheet[]
   circuitJson: CircuitElement[]
-  isFirstSchematicSheet: boolean
+  includeAllSchematicElements: boolean
   schematicSheetId: SchematicSheetId | undefined
 }
 
 type SchematicSheetMembershipParams = {
   element: CircuitElement
-  isFirstSchematicSheet: boolean
+  includeAllSchematicElements: boolean
   schematicSheetId: SchematicSheetId | undefined
 }
 
@@ -212,14 +219,14 @@ function getBoxedSchematicPinGeometry({
 
 function doesElementBelongToSchematicSheet({
   element,
-  isFirstSchematicSheet,
+  includeAllSchematicElements,
   schematicSheetId,
 }: SchematicSheetMembershipParams): boolean {
   const elementSchematicSheetId = asString(element.schematic_sheet_id)
   return schematicSheetId
     ? elementSchematicSheetId === schematicSheetId ||
-        (isFirstSchematicSheet && !elementSchematicSheetId)
-    : !elementSchematicSheetId || isFirstSchematicSheet
+        (includeAllSchematicElements && !elementSchematicSheetId)
+    : !elementSchematicSheetId || includeAllSchematicElements
 }
 
 function addSchematicRecord(
@@ -233,8 +240,9 @@ function addSchematicRecord(
 }
 
 export function createSchematicDocument({
+  childSheets = [],
   circuitJson,
-  isFirstSchematicSheet,
+  includeAllSchematicElements,
   schematicSheetId,
 }: CreateSchematicDocumentParams): string {
   const schematicElements = circuitJson.filter(
@@ -243,16 +251,63 @@ export function createSchematicDocument({
       element.type !== "schematic_sheet" &&
       doesElementBelongToSchematicSheet({
         element,
-        isFirstSchematicSheet,
+        includeAllSchematicElements,
         schematicSheetId,
       }),
   )
   const {
     circuitToAltiumSchematicLength,
     circuitToAltiumSchematicPoint,
-    width: altiumSheetWidth,
-    height: altiumSheetHeight,
+    width: contentWidth,
+    height: contentHeight,
   } = getSchematicTransform(schematicElements)
+  const sheetSymbolPlans = createAltiumSchematicSheetSymbolPlans({
+    childSheets,
+    circuitJson,
+  })
+  const explicitlyPositionedSheetSymbolComponents = new Set(
+    sheetSymbolPlans.flatMap((plan) =>
+      plan.placementComponent ? [plan.placementComponent] : [],
+    ),
+  )
+  const automaticallyPlacedSheetSymbolPlans = sheetSymbolPlans.filter(
+    (plan) => !plan.placementComponent,
+  )
+  const sheetSymbolColumnCount = Math.max(
+    Math.ceil(Math.sqrt(automaticallyPlacedSheetSymbolPlans.length)),
+    1,
+  )
+  const sheetSymbolRowCount = Math.ceil(
+    automaticallyPlacedSheetSymbolPlans.length / sheetSymbolColumnCount,
+  )
+  const sheetSymbolColumnWidth = Math.max(
+    ...automaticallyPlacedSheetSymbolPlans.map((plan) => plan.width),
+    0,
+  )
+  const sheetSymbolRowHeight = Math.max(
+    ...automaticallyPlacedSheetSymbolPlans.map((plan) => plan.height),
+    0,
+  )
+  const sheetSymbolStartX =
+    schematicElements.length > 0 ? contentWidth + 40 : 60
+  const sheetSymbolLayoutWidth =
+    sheetSymbolColumnCount * sheetSymbolColumnWidth +
+    Math.max(sheetSymbolColumnCount - 1, 0) * 40
+  const sheetSymbolLayoutHeight =
+    sheetSymbolRowCount * sheetSymbolRowHeight +
+    Math.max(sheetSymbolRowCount - 1, 0) * 40
+  const altiumSheetWidth = Math.max(
+    contentWidth,
+    automaticallyPlacedSheetSymbolPlans.length > 0
+      ? sheetSymbolStartX + sheetSymbolLayoutWidth + 60
+      : 0,
+  )
+  const altiumSheetHeight = Math.max(
+    contentHeight,
+    automaticallyPlacedSheetSymbolPlans.length > 0
+      ? sheetSymbolLayoutHeight + 120
+      : 0,
+  )
   const altiumSchematicFontTable = createAltiumSchematicFontTable({
     schematicElements,
   })
@@ -274,6 +329,59 @@ export function createSchematicDocument({
     ],
     schematicRecordContext,
   )
+
+  let automaticallyPlacedPlanIndex = 0
+  for (const plan of sheetSymbolPlans) {
+    let placedPlan = plan
+    let location: Point
+    if (plan.placementComponent) {
+      const circuitCenter = asPoint(plan.placementComponent.center) ?? {
+        x: 0,
+        y: 0,
+      }
+      const circuitSize = isCircuitElement(plan.placementComponent.size)
+        ? plan.placementComponent.size
+        : {}
+      const width = circuitToAltiumSchematicLength(
+        asPositiveNumber(circuitSize.width, plan.width / 20),
+      )
+      const height = circuitToAltiumSchematicLength(
+        asPositiveNumber(circuitSize.height, plan.height / 20),
+      )
+      const altiumCenter = circuitToAltiumSchematicPoint(circuitCenter)
+      location = {
+        x: altiumCenter.x - width / 2,
+        y: altiumCenter.y + height / 2,
+      }
+      placedPlan = { ...plan, height, width }
+    } else {
+      const columnIndex = automaticallyPlacedPlanIndex % sheetSymbolColumnCount
+      const rowIndex = Math.floor(
+        automaticallyPlacedPlanIndex / sheetSymbolColumnCount,
+      )
+      location = {
+        x: sheetSymbolStartX + columnIndex * (sheetSymbolColumnWidth + 40),
+        y: altiumSheetHeight - 60 - rowIndex * (sheetSymbolRowHeight + 40),
+      }
+      automaticallyPlacedPlanIndex++
+    }
+    const altiumSymbolRecordIndex = addSchematicRecord(
+      createAltiumSchematicSheetSymbolRecordFields({
+        location,
+        plan: placedPlan,
+      }),
+      schematicRecordContext,
+    )
+    for (const recordFields of createAltiumSchematicSheetSymbolOwnedRecordFields(
+      {
+        altiumSymbolRecordIndex,
+        location,
+        plan: placedPlan,
+      },
+    )) {
+      addSchematicRecord(recordFields, schematicRecordContext)
+    }
+  }
 
   const sourceComponents = new Map<SourceComponentId, CircuitElement>(
     byType(circuitJson, "source_component")
@@ -329,7 +437,11 @@ export function createSchematicDocument({
   }
 
   for (const [componentNumber, schematicComponent] of schematicElements
-    .filter((element) => element.type === "schematic_component")
+    .filter(
+      (element) =>
+        element.type === "schematic_component" &&
+        !explicitlyPositionedSheetSymbolComponents.has(element),
+    )
     .entries()) {
     const circuitComponentCenter = asPoint(schematicComponent.center) ?? {
       x: 0,
