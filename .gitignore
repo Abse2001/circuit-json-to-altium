@@ -37,4 +37,5 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # downloaded test references
 references/*.PcbDoc
+references/*.PrjPCB
 references/*.SchDoc

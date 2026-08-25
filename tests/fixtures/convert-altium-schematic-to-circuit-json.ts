@@ -6,7 +6,7 @@ import {
   AltiumSchPinRecord,
   type AltiumSchPowerPortRecord,
   getSchematicRecordPoints,
-  resolveSchematicParameterReference,
+  resolveSchematicParameterReferenceWithContext,
 } from "altiumts"
 import type {
   CircuitElement,
@@ -21,6 +21,7 @@ import {
   toCircuitLength,
   toCircuitPoint,
 } from "./altium-schematic-coordinate-utils"
+import type { AltiumSchematicProjectContext } from "./altium-schematic-project-context"
 import { appendAltiumSchematicComponentTextElements } from "./append-altium-schematic-component-text-elements"
 import { appendAltiumSchematicPinTextElements } from "./append-altium-schematic-pin-text-elements"
 import { appendAltiumSchematicSheetAnnotationElements } from "./append-altium-schematic-sheet-annotation-elements"
@@ -118,10 +119,15 @@ function hasComponentAncestor({
   return false
 }
 
-function appendUnownedVisibleParameterTextElements(
-  document: AltiumSchDoc,
-  elements: CircuitElement[],
-): void {
+function appendUnownedVisibleParameterTextElements({
+  document,
+  elements,
+  projectContext,
+}: {
+  document: AltiumSchDoc
+  elements: CircuitElement[]
+  projectContext?: AltiumSchematicProjectContext
+}): void {
   for (const [recordIndex, record] of document.records.entries()) {
     const sourceText =
       record.getDecoded("TEXT") ?? record.getDecoded("NAME") ?? ""
@@ -139,7 +145,11 @@ function appendUnownedVisibleParameterTextElements(
       record,
       schematicTextId: `schematic_text_unowned_parameter_${recordIndex}`,
       text:
-        resolveSchematicParameterReference(document, sourceText) ?? sourceText,
+        resolveSchematicParameterReferenceWithContext({
+          document,
+          reference: sourceText,
+          ...projectContext,
+        }) ?? sourceText,
     })
   }
 }
@@ -648,6 +658,7 @@ function appendNetLabelElements(
 
 export function convertAltiumSchematicToCircuitJson(
   document: AltiumSchDoc,
+  projectContext?: AltiumSchematicProjectContext,
 ): CircuitElement[] {
   const elements: CircuitElement[] = []
   for (const [componentIndex, component] of document.components.entries()) {
@@ -661,9 +672,17 @@ export function convertAltiumSchematicToCircuitJson(
   appendOffSheetPortElements(document, elements)
   appendWireElements(document, elements)
   appendNetLabelElements(document, elements)
-  appendUnownedVisibleParameterTextElements(document, elements)
+  appendUnownedVisibleParameterTextElements({
+    document,
+    elements,
+    projectContext,
+  })
   applyAltiumNoConnectToSourcePorts({ document, elements })
   appendAltiumSchematicSheetElements(document, elements)
-  appendAltiumSchematicSheetAnnotationElements(document, elements)
+  appendAltiumSchematicSheetAnnotationElements({
+    document,
+    elements,
+    projectContext,
+  })
   return elements
 }
