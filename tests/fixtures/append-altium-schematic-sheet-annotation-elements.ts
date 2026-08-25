@@ -2,7 +2,7 @@ import {
   type AltiumRecord,
   type AltiumSchDoc,
   getSchematicRecordPoints,
-  resolveSchematicParameterReference,
+  resolveSchematicParameterReferenceWithContext,
 } from "altiumts"
 import type { CircuitElement } from "../../lib/types"
 import {
@@ -11,6 +11,7 @@ import {
   toCircuitLength,
   toCircuitPoint,
 } from "./altium-schematic-coordinate-utils"
+import type { AltiumSchematicProjectContext } from "./altium-schematic-project-context"
 import { getAltiumSchematicTextFrameLines } from "./get-altium-schematic-text-frame-lines"
 import { getAltiumSchematicTextPresentation } from "./get-altium-schematic-text-presentation"
 import { getCssColorFromAltiumRecord } from "./get-css-color-from-altium-record"
@@ -21,17 +22,23 @@ function appendLabelAnnotation({
   annotationIndex,
   document,
   elements,
+  projectContext,
   record,
 }: {
   annotationIndex: number
   document: AltiumSchDoc
   elements: CircuitElement[]
+  projectContext?: AltiumSchematicProjectContext
   record: AltiumRecord
 }): void {
   const sourceText = record.getDecoded("TEXT") ?? ""
   if (!sourceText || record.getBoolean("ISHIDDEN") === true) return
   const text =
-    resolveSchematicParameterReference(document, sourceText) ?? sourceText
+    resolveSchematicParameterReferenceWithContext({
+      document,
+      reference: sourceText,
+      ...projectContext,
+    }) ?? sourceText
   elements.push({
     type: "schematic_text",
     schematic_text_id: `schematic_text_label_${annotationIndex}`,
@@ -191,10 +198,15 @@ function appendTextFrameAnnotations({
   }
 }
 
-export function appendAltiumSchematicSheetAnnotationElements(
-  document: AltiumSchDoc,
-  elements: CircuitElement[],
-): void {
+export function appendAltiumSchematicSheetAnnotationElements({
+  document,
+  elements,
+  projectContext,
+}: {
+  document: AltiumSchDoc
+  elements: CircuitElement[]
+  projectContext?: AltiumSchematicProjectContext
+}): void {
   for (const [annotationIndex, record] of document.records.entries()) {
     if (
       !ANNOTATION_RECORD_KINDS.has(record.recordKind ?? "") ||
@@ -203,7 +215,13 @@ export function appendAltiumSchematicSheetAnnotationElements(
       continue
     }
     if (record.recordKind === "4") {
-      appendLabelAnnotation({ annotationIndex, document, elements, record })
+      appendLabelAnnotation({
+        annotationIndex,
+        document,
+        elements,
+        projectContext,
+        record,
+      })
     } else if (record.recordKind === "6" || record.recordKind === "7") {
       appendPathAnnotation({ annotationIndex, elements, record })
     } else if (record.recordKind === "10" || record.recordKind === "14") {

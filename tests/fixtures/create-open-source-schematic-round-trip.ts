@@ -1,5 +1,6 @@
 import { resolve } from "node:path"
 import {
+  AltiumPrjPcb,
   AltiumSchDoc,
   parseAltiumFile,
   serializeAltiumSheetToSvg,
@@ -20,6 +21,11 @@ export type OpenSourceSchematicRoundTrip = ReturnType<
 type OpenSourceSchematicRoundTripOptions = {
   filename: string
   projectName: string
+  sourceProject?: {
+    documentName: string
+    filename: string
+    projectName: string
+  }
 }
 
 const ALTIUM_SCHEMATIC_PORT_FALLBACK_FONT_SIZE_POINTS = 8
@@ -45,20 +51,45 @@ function parseSchematicDocument(schematicBytes: Uint8Array): AltiumSchDoc {
   return document
 }
 
-export async function createOpenSourceSchematicRoundTrip({
-  filename,
-  projectName,
-}: OpenSourceSchematicRoundTripOptions): Promise<OpenSourceSchematicRoundTrip> {
-  const sourcePath = resolve(
+function parseProjectDocument(projectBytes: Uint8Array): AltiumPrjPcb {
+  const document = parseAltiumFile(projectBytes).document
+  if (!(document instanceof AltiumPrjPcb)) {
+    throw new Error(`Expected an Altium project document, got ${document.type}`)
+  }
+  return document
+}
+
+async function readReference(filename: string): Promise<Uint8Array> {
+  const referencePath = resolve(
     import.meta.dir,
     "..",
     "..",
     "references",
     filename,
   )
-  const sourceBytes = new Uint8Array(await Bun.file(sourcePath).arrayBuffer())
+  return new Uint8Array(await Bun.file(referencePath).arrayBuffer())
+}
+
+export async function createOpenSourceSchematicRoundTrip({
+  filename,
+  projectName,
+  sourceProject,
+}: OpenSourceSchematicRoundTripOptions): Promise<OpenSourceSchematicRoundTrip> {
+  const sourceBytes = await readReference(filename)
   const sourceDocument = parseSchematicDocument(sourceBytes)
-  const sourceCircuitJson = convertAltiumSchematicToCircuitJson(sourceDocument)
+  const sourceProjectContext = sourceProject
+    ? {
+        documentName: sourceProject.documentName,
+        project: parseProjectDocument(
+          await readReference(sourceProject.filename),
+        ),
+        projectName: sourceProject.projectName,
+      }
+    : undefined
+  const sourceCircuitJson = convertAltiumSchematicToCircuitJson(
+    sourceDocument,
+    sourceProjectContext,
+  )
   const converter = new CircuitJsonToAltiumConverter(sourceCircuitJson, {
     projectName,
   })
@@ -81,6 +112,6 @@ export async function createOpenSourceSchematicRoundTrip({
     roundTripSvg: serializeAltiumSheetToSvg(roundTripDocument),
     sourceOffSheetPortFontSizePoints:
       getOffSheetPortFontSizePoints(sourceDocument),
-    sourceSvg: serializeAltiumSheetToSvg(sourceDocument),
+    sourceSvg: serializeAltiumSheetToSvg(sourceDocument, sourceProjectContext),
   }
 }

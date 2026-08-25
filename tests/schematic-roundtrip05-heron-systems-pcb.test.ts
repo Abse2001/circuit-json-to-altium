@@ -6,6 +6,11 @@ test("round-trips the open-source HERON systems PCB Altium schematic", async () 
   const result = await createOpenSourceSchematicRoundTrip({
     filename: "heron-systems-pcb.SchDoc",
     projectName: "HERON systems PCB schematic",
+    sourceProject: {
+      documentName: "systems_pcb.SchDoc",
+      filename: "heron-systems-pcb.PrjPCB",
+      projectName: "systems_pcb.PrjPCB",
+    },
   })
 
   expect(result.roundTripCounts).toEqual(result.sourceCounts)
@@ -24,6 +29,12 @@ test("round-trips the open-source HERON systems PCB Altium schematic", async () 
   )
   expect(sourceSheetText).toContain("1")
   expect(sourceSheetText).toContain("5")
+  expect(sourceSheetText).toContain("systems_pcb.SchDoc")
+  expect(sourceSheetText).toContain("v3.3")
+  expect(sourceSheetText).toContain("Bruno Almeida")
+  expect(sourceSheetText).not.toContain("=DocumentName")
+  expect(sourceSheetText).not.toContain("=ProjectRevision")
+  expect(sourceSheetText).not.toContain("=ProjectDrawnBy")
   expect(sourceSheetText).not.toContain("=SheetNumber")
   expect(sourceSheetText).not.toContain("=SheetTotal")
   expect(result.roundTripComponentTextSignatures).toEqual(

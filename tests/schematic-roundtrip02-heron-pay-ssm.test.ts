@@ -6,6 +6,11 @@ test("round-trips the open-source HERON PAY-SSM Altium schematic", async () => {
   const result = await createOpenSourceSchematicRoundTrip({
     filename: "heron-pay-ssm-top.SchDoc",
     projectName: "HERON PAY-SSM schematic",
+    sourceProject: {
+      documentName: "TOP.SchDoc",
+      filename: "heron-pay-ssm.PrjPCB",
+      projectName: "pay-ssm.PrjPCB",
+    },
   })
 
   expect(result.roundTripCounts).toEqual(result.sourceCounts)
@@ -24,6 +29,10 @@ test("round-trips the open-source HERON PAY-SSM Altium schematic", async () => {
   )
   expect(sourceSheetText).toContain("v4.3")
   expect(sourceSheetText).toContain("Lorna Lan, Dylan Vogel")
+  expect(sourceSheetText).toContain("TOP.SchDoc")
+  expect(sourceSheetText).toContain("UTAT SS")
+  expect(sourceSheetText).not.toContain("=DocumentName")
+  expect(sourceSheetText).not.toContain("=PROJ_ORG")
   expect(sourceSheetText).not.toContain("=REVISION")
   expect(sourceSheetText).not.toContain("=DrawnBy")
   expect(result.roundTripComponentTextSignatures).toEqual(

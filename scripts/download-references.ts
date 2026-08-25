@@ -45,11 +45,25 @@ const references: ReferenceSpec[] = [
     url: "https://raw.githubusercontent.com/utat-ss/HERON-pcbs/7ce0d62ee6159ad9d74eb4ae941792dc0e2e4820/payload/pay-ssm/TOP.SchDoc",
   },
   {
+    filename: "heron-pay-ssm.PrjPCB",
+    sha256: "000882c19f01aa0e0374650ba216c81cae5b99b77fa9620ae9f3f0d94f62345b",
+    source:
+      "utat-ss/HERON-pcbs@7ce0d62ee6159ad9d74eb4ae941792dc0e2e4820 (CERN-OHL-P)",
+    url: "https://raw.githubusercontent.com/utat-ss/HERON-pcbs/7ce0d62ee6159ad9d74eb4ae941792dc0e2e4820/payload/pay-ssm/pay-ssm.PrjPCB",
+  },
+  {
     filename: "heron-systems-pcb.SchDoc",
     sha256: "2fd2d93806602a290cfc9afd7d523ac0f4faa8e5d993d70537f070e850fd6d6b",
     source:
       "utat-ss/HERON-pcbs@7ce0d62ee6159ad9d74eb4ae941792dc0e2e4820 (CERN-OHL-P)",
     url: "https://raw.githubusercontent.com/utat-ss/HERON-pcbs/7ce0d62ee6159ad9d74eb4ae941792dc0e2e4820/systems/systems_pcb/systems_pcb.SchDoc",
+  },
+  {
+    filename: "heron-systems-pcb.PrjPCB",
+    sha256: "c4d7222c4e31eef1c6f1d8989d6cf9906bc5fc0c8f6fa51c4b9c82d5e538e5b9",
+    source:
+      "utat-ss/HERON-pcbs@7ce0d62ee6159ad9d74eb4ae941792dc0e2e4820 (CERN-OHL-P)",
+    url: "https://raw.githubusercontent.com/utat-ss/HERON-pcbs/7ce0d62ee6159ad9d74eb4ae941792dc0e2e4820/systems/systems_pcb/systems_pcb.PrjPCB",
   },
   {
     filename: "simplefoc-mini.PcbDoc",
