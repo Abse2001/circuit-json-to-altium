@@ -87,6 +87,18 @@ test("renders a schematic pin edge symbol round trip", async () => {
   const firstSchematic = converter.getOutput().schematics[0]
   if (!firstSchematic) throw new Error("Converter did not create a schematic")
   const altiumSchematic = parseAltiumSchDoc(firstSchematic.content)
+  const clockPin = altiumSchematic.pins.find((pin) => pin.name === "CLOCK")
+  const invertedPin = altiumSchematic.pins.find(
+    (pin) => pin.name === "INVERTED",
+  )
+  const invertedClockPin = altiumSchematic.pins.find(
+    (pin) => pin.name === "INVERTED CLOCK",
+  )
+
+  expect(clockPin?.getNumber("SYMBOL_INNEREDGE")).toBe(3)
+  expect(invertedPin?.getNumber("SYMBOL_OUTEREDGE")).toBe(1)
+  expect(invertedClockPin?.getNumber("SYMBOL_INNEREDGE")).toBe(3)
+  expect(invertedClockPin?.getNumber("SYMBOL_OUTEREDGE")).toBe(1)
 
   const sourceSvg = await convertCircuitJsonToSchematicSvg(circuitJson)
   const altiumSvg = serializeAltiumSheetToSvg(altiumSchematic)
