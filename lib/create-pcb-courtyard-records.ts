@@ -31,16 +31,10 @@ export function createPcbCourtyardRecords({
   componentIndex,
 }: CreatePcbCourtyardRecordsOptions): string[] {
   const records: string[] = []
-  const courtyards = circuitJson.flatMap((element) => {
+
+  for (const element of circuitJson) {
     const courtyard = getCourtyardGeometry(element)
-    return courtyard ? [courtyard] : []
-  })
-
-  courtyards.sort(
-    (a, b) => getCourtyardZIndex(a.layer) - getCourtyardZIndex(b.layer),
-  )
-
-  for (const courtyard of courtyards) {
+    if (!courtyard) continue
     const altiumComponentIndex = componentIndex.get(courtyard.pcbComponentId)
     if (altiumComponentIndex === undefined) {
       throw new Error(
@@ -126,10 +120,6 @@ function getCourtyardGeometry(
     }
   }
   return undefined
-}
-
-function getCourtyardZIndex(circuitLayer: string): number {
-  return circuitLayer.toLowerCase() === "bottom" ? 0 : 1
 }
 
 function getAltiumCourtyardLayer(circuitLayer: string): string {
