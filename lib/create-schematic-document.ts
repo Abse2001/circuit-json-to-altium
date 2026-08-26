@@ -87,6 +87,8 @@ type SchematicSymbolPrimitiveMaps = {
 const ALTIUM_PIN_STANDARD_FLAGS = 0x20
 const ALTIUM_PIN_NAME_VISIBLE_FLAG = 0x08
 const ALTIUM_PIN_DESIGNATOR_VISIBLE_FLAG = 0x10
+const ALTIUM_PIN_CLOCK_SYMBOL = 3
+const ALTIUM_PIN_INVERSION_SYMBOL = 1
 const ALTIUM_SCHEMATIC_DEFAULT_COLOR = 0x37_29_1f
 const ALTIUM_PIN_ORIENTATION_BY_FACING_DIRECTION: Record<string, number> = {
   left: 2,
@@ -703,6 +705,12 @@ export function createSchematicDocument({
           `LOCATION.X=${altiumPinLocation.x}`,
           `LOCATION.Y=${altiumPinLocation.y}`,
           `PINLENGTH=${altiumPinLength}`,
+          ...(schematicPort.has_input_arrow === true
+            ? [`SYMBOL_INNEREDGE=${ALTIUM_PIN_CLOCK_SYMBOL}`]
+            : []),
+          ...(schematicPort.is_drawn_with_inversion_circle === true
+            ? [`SYMBOL_OUTEREDGE=${ALTIUM_PIN_INVERSION_SYMBOL}`]
+            : []),
           ...pinColorRecordFields,
           "FONTID=2",
         ],
