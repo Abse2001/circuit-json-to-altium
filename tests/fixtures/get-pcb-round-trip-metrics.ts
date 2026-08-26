@@ -1,6 +1,8 @@
 import type { CircuitElement } from "../../lib/types"
+import { getPcbSemanticMismatches } from "./get-pcb-semantic-signatures"
 
 const preservedPrimitiveTypes = [
+  "pcb_board",
   "source_net",
   "source_component",
   "pcb_component",
@@ -53,6 +55,7 @@ export type PcbRoundTripMetrics = {
   rotationMismatchCount: number
   roundTripCounts: PreservedPrimitiveCounts
   roundTripSourceNetNames: string[]
+  semanticMismatches: string[]
   sourceCounts: PreservedPrimitiveCounts
   sourceNetNames: string[]
   sourcePrimitiveTotal: number
@@ -285,6 +288,10 @@ export function getPcbRoundTripMetrics({
     ),
     roundTripCounts,
     roundTripSourceNetNames: getSourceNetNames(roundTripCircuitJson),
+    semanticMismatches: getPcbSemanticMismatches({
+      roundTripCircuitJson,
+      sourceCircuitJson,
+    }),
     sourceCounts,
     sourceNetNames: getSourceNetNames(sourceCircuitJson),
     sourcePrimitiveTotal: Object.values(sourceCounts).reduce(
