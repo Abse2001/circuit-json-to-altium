@@ -123,7 +123,15 @@ test("preserves courtyards, keepouts, and fabrication annotations", async () => 
   expect(dimensions[0]?.get("LAYER")).toBe("MECHANICAL1")
   expectValidPcb(pcb)
 
-  const sourceSvg = await convertCircuitJsonToPcbSvg(elements as CircuitJson)
+  const sourceSvg = await convertCircuitJsonToPcbSvg(elements as CircuitJson, {
+    showCourtyards: true,
+  })
+  expect(sourceSvg).toContain(
+    'data-pcb-courtyard-outline-id="courtyard_outline_1"',
+  )
+  expect(sourceSvg).toContain(
+    'data-pcb-courtyard-circle-id="courtyard_circle_1"',
+  )
   const altiumSvg = serializeAltiumPcbToSvg(pcb)
   await expect(createSideBySideSvg(sourceSvg, altiumSvg)).toMatchSvgSnapshot(
     import.meta.path,
