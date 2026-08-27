@@ -15,6 +15,11 @@ type AltiumSchematicTextPlacement = {
   position: Point
 }
 
+type AltiumSchematicPinGeometry = {
+  length: number
+  location: Point
+}
+
 const ALTIUM_JUSTIFICATION_BY_TEXT_ANCHOR = {
   bottom_left: 0,
   middle_bottom: 1,
@@ -31,6 +36,7 @@ export type AltiumSchematicSymbolRecords = {
   commentPlacement?: AltiumSchematicTextPlacement
   designatorPlacement?: AltiumSchematicTextPlacement
   graphicRecordFields: string[][]
+  pinGeometryByLabel: Map<string, AltiumSchematicPinGeometry>
 }
 
 type CreateAltiumSchematicSymbolRecordsOptions = {
@@ -61,6 +67,10 @@ export function createAltiumSchematicSymbolRecords({
     symbolToCircuitMatrix,
   }
   const graphicRecordFields: string[][] = []
+  const pinGeometryByLabel = createAltiumPinGeometryByLabel({
+    schematicSymbol,
+    symbolMapping,
+  })
   let commentPlacement: AltiumSchematicTextPlacement | undefined
   let designatorPlacement: AltiumSchematicTextPlacement | undefined
 
@@ -97,7 +107,70 @@ export function createAltiumSchematicSymbolRecords({
     commentPlacement,
     designatorPlacement,
     graphicRecordFields,
+    pinGeometryByLabel,
   }
+}
+
+function createAltiumPinGeometryByLabel({
+  schematicSymbol,
+  symbolMapping,
+}: {
+  schematicSymbol: SchSymbol
+  symbolMapping: AltiumSchematicSymbolMapping
+}): Map<string, AltiumSchematicPinGeometry> {
+  const pinGeometryByLabel = new Map<string, AltiumSchematicPinGeometry>()
+
+  for (const port of schematicSymbol.ports) {
+    const connectedPrimitivePoints = schematicSymbol.primitives.flatMap(
+      (primitive) => {
+        if (primitive.type !== "path" || primitive.points.length < 2) return []
+        const firstPoint = primitive.points[0]
+        const lastPoint = primitive.points.at(-1)
+        if (firstPoint?.x === port.x && firstPoint.y === port.y) {
+          return primitive.points[1] ? [primitive.points[1]] : []
+        }
+        if (lastPoint?.x === port.x && lastPoint.y === port.y) {
+          const adjacentPoint = primitive.points.at(-2)
+          return adjacentPoint ? [adjacentPoint] : []
+        }
+        return []
+      },
+    )
+    const bodyPoint = connectedPrimitivePoints.toSorted((left, right) => {
+      const leftDistance = Math.hypot(left.x - port.x, left.y - port.y)
+      const rightDistance = Math.hypot(right.x - port.x, right.y - port.y)
+      return leftDistance - rightDistance
+    })[0]
+    if (!bodyPoint) continue
+
+    const altiumBodyPoint = transformSchematicSymbolPoint({
+      symbolMapping,
+      symbolPoint: bodyPoint,
+    })
+    const altiumTerminalPoint = transformSchematicSymbolPoint({
+      symbolMapping,
+      symbolPoint: port,
+    })
+    const pinGeometry = {
+      length: Math.max(
+        1,
+        Math.round(
+          Math.hypot(
+            altiumTerminalPoint.x - altiumBodyPoint.x,
+            altiumTerminalPoint.y - altiumBodyPoint.y,
+          ),
+        ),
+      ),
+      location: altiumBodyPoint,
+    }
+    for (const label of port.labels) {
+      if (!pinGeometryByLabel.has(label)) {
+        pinGeometryByLabel.set(label, pinGeometry)
+      }
+    }
+  }
+
+  return pinGeometryByLabel
 }
 
 function findSchematicSymbol(symbolName: string): SchSymbol | undefined {

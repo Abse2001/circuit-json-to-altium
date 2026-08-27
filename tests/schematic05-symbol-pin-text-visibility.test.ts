@@ -100,6 +100,16 @@ test("uses native pin text visibility for built-in and boxed symbols", async () 
   expect(resistorPins.map((pin) => pin.getNumber("PINCONGLOMERATE"))).toEqual([
     34, 32,
   ])
+  expect(
+    resistorPins.map((pin) => ({
+      length: pin.getNumber("PINLENGTH"),
+      x: pin.getNumber("LOCATION.X"),
+      y: pin.getNumber("LOCATION.Y"),
+    })),
+  ).toEqual([
+    { length: 2, x: 102, y: 100 },
+    { length: 2, x: 110, y: 100 },
+  ])
   expect(chipPin?.getNumber("PINCONGLOMERATE")).toBe(58)
   expectValidSchematic(schematic)
 })

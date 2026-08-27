@@ -646,12 +646,6 @@ export function createSchematicDocument({
         ),
         facingDirection,
       })
-      const altiumPinLocation = schematicSymbolRecords
-        ? circuitToAltiumSchematicPoint(circuitPinTerminal)
-        : boxedSchematicPinGeometry.location
-      const altiumPinLength = schematicSymbolRecords
-        ? 10
-        : boxedSchematicPinGeometry.length
       const altiumPinOrientation =
         ALTIUM_PIN_ORIENTATION_BY_FACING_DIRECTION[facingDirection] ?? 2
       const isPinTextVisibleByDefault = !schematicSymbolRecords
@@ -661,6 +655,27 @@ export function createSchematicDocument({
         `Pin ${pinIndex + 1}`
       const pinDesignator =
         sanitizeField(sourcePort?.pin_number) || `${pinIndex + 1}`
+      const pinGeometryLabels = [
+        pinDesignator,
+        asString(sourcePort?.name),
+        ...(Array.isArray(sourcePort?.port_hints)
+          ? sourcePort.port_hints.flatMap((portHint) =>
+              typeof portHint === "string" ? [portHint] : [],
+            )
+          : []),
+        asString(schematicPort.display_pin_label),
+      ]
+      const builtinPinGeometry = pinGeometryLabels
+        .map((label) => schematicSymbolRecords?.pinGeometryByLabel.get(label))
+        .find((pinGeometry) => pinGeometry !== undefined)
+      const altiumPinLocation =
+        builtinPinGeometry?.location ??
+        (schematicSymbolRecords
+          ? circuitToAltiumSchematicPoint(circuitPinTerminal)
+          : boxedSchematicPinGeometry.location)
+      const altiumPinLength =
+        builtinPinGeometry?.length ??
+        (schematicSymbolRecords ? 10 : boxedSchematicPinGeometry.length)
       const pinNameText =
         typeof schematicPort.display_pin_label === "string"
           ? findSchematicComponentText({
