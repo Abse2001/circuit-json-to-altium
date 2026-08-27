@@ -27,9 +27,9 @@ import { appendAltiumSchematicPinTextElements } from "./append-altium-schematic-
 import { appendAltiumSchematicSheetAnnotationElements } from "./append-altium-schematic-sheet-annotation-elements"
 import { appendAltiumSchematicSheetElements } from "./append-altium-schematic-sheet-elements"
 import { appendAltiumSchematicSymbolPrimitives } from "./append-altium-schematic-symbol-primitives"
-import { applyAltiumNoConnectToSourcePorts } from "./apply-altium-no-connect-to-source-ports"
 import { getAltiumSchematicTextPresentation } from "./get-altium-schematic-text-presentation"
 import { isAltiumSchematicComponentRecordVisible } from "./is-altium-schematic-component-record-visible"
+import { preserveAltiumNoConnectRecords } from "./preserve-altium-no-connect-records"
 
 type AltiumBounds = {
   maxX: number
@@ -677,8 +677,8 @@ export function convertAltiumSchematicToCircuitJson(
     elements,
     projectContext,
   })
-  applyAltiumNoConnectToSourcePorts({ document, elements })
   appendAltiumSchematicSheetElements(document, elements)
+  preserveAltiumNoConnectRecords({ document, elements })
   appendAltiumSchematicSheetAnnotationElements({
     document,
     elements,
