@@ -22,6 +22,7 @@ const preservedPrimitiveTypes = [
   "pcb_note_path",
   "pcb_note_text",
   "pcb_note_dimension",
+  "cad_component",
 ] as const
 
 const geometryElementTypes = [
@@ -49,6 +50,7 @@ type RotationElementType = (typeof rotationElementTypes)[number]
 export type PreservedPrimitiveCounts = Record<PreservedPrimitiveType, number>
 
 export type PcbRoundTripMetrics = {
+  cadComponentMismatchCount: number
   geometryMaxDeltaMm: number
   rotationMismatchCount: number
   roundTripCounts: PreservedPrimitiveCounts
@@ -57,6 +59,122 @@ export type PcbRoundTripMetrics = {
   sourceNetNames: string[]
   sourcePrimitiveTotal: number
   silkscreenTextMismatchCount: number
+}
+
+function getPoint3(
+  input: unknown,
+): { x: number; y: number; z: number } | undefined {
+  if (
+    typeof input !== "object" ||
+    input === null ||
+    !("x" in input) ||
+    !("y" in input) ||
+    !("z" in input) ||
+    typeof input.x !== "number" ||
+    typeof input.y !== "number" ||
+    typeof input.z !== "number"
+  ) {
+    return undefined
+  }
+  return { x: input.x, y: input.y, z: input.z }
+}
+
+function getPoint2(input: unknown): { x: number; y: number } | undefined {
+  if (
+    typeof input !== "object" ||
+    input === null ||
+    !("x" in input) ||
+    !("y" in input) ||
+    typeof input.x !== "number" ||
+    typeof input.y !== "number"
+  ) {
+    return undefined
+  }
+  return { x: input.x, y: input.y }
+}
+
+function point3Matches(
+  sourcePointInput: unknown,
+  roundTripPointInput: unknown,
+): boolean {
+  const sourcePoint = getPoint3(sourcePointInput)
+  const roundTripPoint = getPoint3(roundTripPointInput)
+  if (!sourcePoint || !roundTripPoint) {
+    return sourcePointInput === roundTripPointInput
+  }
+  return (
+    Math.abs(sourcePoint.x - roundTripPoint.x) <= 0.0001 &&
+    Math.abs(sourcePoint.y - roundTripPoint.y) <= 0.0001 &&
+    Math.abs(sourcePoint.z - roundTripPoint.z) <= 0.0001
+  )
+}
+
+function getCadComponentLocalPosition({
+  cadComponent,
+  circuitJson,
+}: {
+  cadComponent: CircuitElement
+  circuitJson: CircuitElement[]
+}): { x: number; y: number; z: number } | undefined {
+  const position = getPoint3(cadComponent.position)
+  if (!position || typeof cadComponent.pcb_component_id !== "string") {
+    return undefined
+  }
+  const pcbComponent = circuitJson.find(
+    (element) =>
+      element.type === "pcb_component" &&
+      element.pcb_component_id === cadComponent.pcb_component_id,
+  )
+  const componentCenter = getPoint2(pcbComponent?.center)
+  if (!componentCenter) return undefined
+  return {
+    x: position.x - componentCenter.x,
+    y: position.y - componentCenter.y,
+    z: position.z,
+  }
+}
+
+function getCadComponentMismatchCount(
+  sourceCircuitJson: CircuitElement[],
+  roundTripCircuitJson: CircuitElement[],
+): number {
+  const sourceCadComponents = sourceCircuitJson.filter(
+    (element) => element.type === "cad_component",
+  )
+  const roundTripCadComponents = roundTripCircuitJson.filter(
+    (element) => element.type === "cad_component",
+  )
+  if (sourceCadComponents.length !== roundTripCadComponents.length) {
+    return Number.POSITIVE_INFINITY
+  }
+
+  return sourceCadComponents.reduce(
+    (mismatchCount, sourceCadComponent, bodyIndex) => {
+      const roundTripCadComponent = roundTripCadComponents[bodyIndex]
+      if (!roundTripCadComponent) return mismatchCount + 1
+      const matches =
+        point3Matches(
+          getCadComponentLocalPosition({
+            cadComponent: sourceCadComponent,
+            circuitJson: sourceCircuitJson,
+          }),
+          getCadComponentLocalPosition({
+            cadComponent: roundTripCadComponent,
+            circuitJson: roundTripCircuitJson,
+          }),
+        ) &&
+        point3Matches(
+          sourceCadComponent.rotation,
+          roundTripCadComponent.rotation,
+        ) &&
+        point3Matches(sourceCadComponent.size, roundTripCadComponent.size) &&
+        sourceCadComponent.layer === roundTripCadComponent.layer &&
+        sourceCadComponent.show_as_translucent_model ===
+          roundTripCadComponent.show_as_translucent_model
+      return mismatchCount + (matches ? 0 : 1)
+    },
+    0,
+  )
 }
 
 function getSourceNetNames(circuitJson: CircuitElement[]): string[] {
@@ -275,6 +393,10 @@ export function getPcbRoundTripMetrics({
   const roundTripCounts = countPreservedPrimitives(roundTripCircuitJson)
 
   return {
+    cadComponentMismatchCount: getCadComponentMismatchCount(
+      sourceCircuitJson,
+      roundTripCircuitJson,
+    ),
     geometryMaxDeltaMm: getGeometryMaxDeltaMm(
       sourceCircuitJson,
       roundTripCircuitJson,
