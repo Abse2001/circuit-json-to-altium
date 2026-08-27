@@ -1,3 +1,4 @@
+import { ALTIUM_UNITS_PER_CIRCUIT_UNIT } from "./altium-schematic-dimensions"
 import {
   ALTIUM_SCHEMATIC_OFF_SHEET_PORT_FONT_ID,
   ALTIUM_SCHEMATIC_OFF_SHEET_PORT_FONT_NAME,
@@ -21,8 +22,7 @@ type CreateAltiumSchematicFontTableInput = {
   schematicElements: CircuitElement[]
 }
 
-const ALTIUM_UNITS_PER_CIRCUIT_UNIT = 20
-const ALTIUM_SCHEMATIC_COMPONENT_FONT_SIZE_POINTS = 4
+const ALTIUM_SCHEMATIC_COMPONENT_FONT_SIZE_POINTS = 8
 const ALTIUM_SCHEMATIC_ANNOTATION_FONT_NAME = "Times New Roman"
 
 export function createAltiumSchematicFontTable({

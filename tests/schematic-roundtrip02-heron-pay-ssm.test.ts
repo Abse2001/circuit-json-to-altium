@@ -49,6 +49,7 @@ test("round-trips the open-source HERON PAY-SSM Altium schematic", async () => {
   )
   expect(result.roundTripSheetSignatures).toEqual(result.sourceSheetSignatures)
   expect(result.geometryMaxDeltaCircuitUnits).toBeLessThan(0.06)
+  expect(result.componentTextPositionMaxDeltaCircuitUnits).toBeLessThan(0.06)
   expect(result.componentSizeMaxDeltaCircuitUnits).toBeLessThan(0.06)
   expect(result.sourceCounts.off_sheet_port).toBe(94)
   expect(result.sourceSheetSignatures).toHaveLength(16)

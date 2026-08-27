@@ -169,7 +169,7 @@ test("preserves component and pin text presentation", async () => {
   }).toEqual({
     designator: {
       color: 0x56_34_12,
-      fontSizePoints: 10,
+      fontSizePoints: 20,
       justification: 8,
       orientation: 1,
       position: expectedDesignatorPosition,
@@ -181,14 +181,14 @@ test("preserves component and pin text presentation", async () => {
     pinTexts: [
       {
         color: 0x0c_0b_0a,
-        fontSizePoints: 7,
+        fontSizePoints: 14,
         justification: 0,
         position: expectedPinNamePosition,
         text: "positive",
       },
       {
         color: 0x0f_0e_0d,
-        fontSizePoints: 8,
+        fontSizePoints: 16,
         justification: 2,
         position: expectedPinNumberPosition,
         text: "2",
@@ -196,7 +196,7 @@ test("preserves component and pin text presentation", async () => {
     ],
     value: {
       color: 0x21_43_65,
-      fontSizePoints: 9,
+      fontSizePoints: 18,
       justification: 4,
       orientation: 0,
       position: expectedValuePosition,

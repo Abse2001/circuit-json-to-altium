@@ -31,6 +31,7 @@ test("round-trips the open-source SimpleFOC Mini Altium schematic", async () => 
     result.sourcePowerPortSymbolNames,
   )
   expect(result.geometryMaxDeltaCircuitUnits).toBeLessThan(0.06)
+  expect(result.componentTextPositionMaxDeltaCircuitUnits).toBeLessThan(0.06)
   expect(result.componentSizeMaxDeltaCircuitUnits).toBeLessThan(0.06)
   expect(result.sourceCounts.off_sheet_port).toBe(14)
   expect(result.sourceCounts.do_not_connect).toBe(0)

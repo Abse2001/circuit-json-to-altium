@@ -35,7 +35,13 @@ test("snapshots boxed component pin text", async () => {
   if (!firstSchematic) throw new Error("Converter did not create a schematic")
   const altiumSchematic = parseAltiumSchDoc(firstSchematic.content)
   const circuitJsonSvg = await convertCircuitJsonToSchematicSvg(circuitJson)
-  const altiumSvg = serializeAltiumSheetToSvg(altiumSchematic)
+  const altiumSvg = serializeAltiumSheetToSvg(altiumSchematic, {
+    backgroundColor: "rgb(245, 241, 237)",
+    height: 600,
+    margin: 0,
+    showBorder: false,
+    width: 1200,
+  })
 
   await expect(
     createSideBySideSvg(circuitJsonSvg, altiumSvg),

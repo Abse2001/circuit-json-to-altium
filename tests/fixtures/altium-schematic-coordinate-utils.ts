@@ -1,6 +1,5 @@
 import type { AltiumPoint, AltiumRecord } from "altiumts"
-
-export const ALTIUM_UNITS_PER_CIRCUIT_UNIT = 20
+import { ALTIUM_UNITS_PER_CIRCUIT_UNIT } from "../../lib/altium-schematic-dimensions"
 
 export type CircuitPoint = {
   x: number

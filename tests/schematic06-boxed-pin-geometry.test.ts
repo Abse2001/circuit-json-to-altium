@@ -51,9 +51,12 @@ test("preserves boxed component body and pin geometry", async () => {
 
   expect({
     body: {
+      areaColor: body?.getNumber("AREACOLOR"),
       left: body?.getNumber("LOCATION.X"),
       bottom: body?.getNumber("LOCATION.Y"),
+      color: body?.getNumber("COLOR"),
       right: body?.getNumber("CORNER.X"),
+      solid: body?.getBoolean("ISSOLID"),
       top: body?.getNumber("CORNER.Y"),
     },
     pin: {
@@ -66,9 +69,17 @@ test("preserves boxed component body and pin geometry", async () => {
       designatorY: designator?.getNumber("LOCATION.Y"),
     },
   }).toEqual({
-    body: { left: 108, bottom: 90, right: 140, top: 110 },
-    pin: { x: 108, y: 106, length: 8 },
-    text: { commentY: 78, designatorY: 122 },
+    body: {
+      areaColor: 0xc2_ff_ff,
+      bottom: 40,
+      color: 132,
+      left: 96,
+      right: 160,
+      solid: true,
+      top: 80,
+    },
+    pin: { x: 96, y: 72, length: 16 },
+    text: { commentY: 28, designatorY: 92 },
   })
   expect(comment?.getBoolean("ISHIDDEN")).toBe(true)
   expect(comment?.getDecoded("TEXT")).toBe("")

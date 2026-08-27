@@ -1,5 +1,6 @@
 import { sanitizeAltiumFieldText } from "altiumts"
 import { getAltiumColorFromCss } from "./altium-color"
+import { ALTIUM_UNITS_PER_CIRCUIT_UNIT } from "./altium-schematic-dimensions"
 import type { AltiumSchematicFontTable } from "./create-altium-schematic-font-table"
 import { asNumber, asPoint, asString, formatNumber } from "./format"
 import {
@@ -15,7 +16,6 @@ type CreateAltiumSchematicSheetAnnotationRecordFieldsInput = {
   fontTable: AltiumSchematicFontTable
 }
 
-const ALTIUM_UNITS_PER_CIRCUIT_UNIT = 20
 const ALTIUM_SCHEMATIC_DEFAULT_COLOR = 0x37_29_1f
 const ALTIUM_SCHEMATIC_DEFAULT_FILL_COLOR = 0xff_ff_ff
 
