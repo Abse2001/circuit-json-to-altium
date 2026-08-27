@@ -13,6 +13,7 @@ import {
 import type { NinePointAnchor } from "circuit-json"
 import type { CircuitElement } from "../../lib/types"
 import { convertAltiumPcbAnnotationsToCircuitJson } from "./convert-altium-pcb-annotations-to-circuit-json"
+import { convertAltiumPcbComponentBodiesToCircuitJson } from "./convert-altium-pcb-component-bodies-to-circuit-json"
 
 const MILLIMETERS_PER_MIL = 0.0254
 
@@ -659,6 +660,12 @@ export function convertAltiumPcbToCircuitJson(
   }
 
   elements.push(
+    ...convertAltiumPcbComponentBodiesToCircuitJson({
+      componentIds,
+      document,
+      toCircuitLength,
+      toCircuitPoint,
+    }),
     ...convertAltiumPcbAnnotationsToCircuitJson({ componentIds, document }),
   )
 

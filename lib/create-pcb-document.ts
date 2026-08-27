@@ -1,5 +1,6 @@
 import { convertCircuitPcbCcwRotationDegreesToAltium } from "./convert-circuit-pcb-ccw-rotation-degrees-to-altium"
 import { createCircuitToAltiumPcbPointTransform } from "./create-circuit-to-altium-pcb-point-transform"
+import { createPcbComponentBodyRecords } from "./create-pcb-component-body-records"
 import { createPcbCopperPourRecords } from "./create-pcb-copper-pour-records"
 import { createPcbCourtyardRecords } from "./create-pcb-courtyard-records"
 import { createPcbDocumentationRecords } from "./create-pcb-documentation-records"
@@ -154,6 +155,14 @@ export const createPcbDocument = (circuitJson: CircuitElement[]): string => {
       ].join("|"),
     )
   }
+
+  lines.push(
+    ...createPcbComponentBodyRecords({
+      circuitJson,
+      circuitToAltiumPcbPoint,
+      componentIndex,
+    }),
+  )
 
   lines.push(
     ...createPcbKeepoutRecords({
