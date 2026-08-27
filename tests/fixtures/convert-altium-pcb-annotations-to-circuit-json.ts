@@ -273,7 +273,7 @@ function convertKeepouts({
   const keepoutPaths = getAltiumPcbAnnotationPaths({
     componentIds,
     document,
-    includeRecord: isKeepoutGraphicRecord,
+    includeRecord: isKeepoutAreaRecord,
   })
   for (const [pathIndex, path] of keepoutPaths.entries()) {
     const circle = getAltiumCircleFromPath(path)
@@ -300,6 +300,22 @@ function convertKeepouts({
       layers: toCircuitKeepoutLayers(path.layer),
     })
   }
+
+  const keepoutStrokePaths = getAltiumPcbAnnotationPaths({
+    componentIds,
+    document,
+    includeRecord: isKeepoutStrokeRecord,
+  })
+  for (const [pathIndex, path] of keepoutStrokePaths.entries()) {
+    keepouts.push({
+      type: "pcb_keepout",
+      pcb_keepout_id: `pcb_keepout_path_${pathIndex}`,
+      shape: "path",
+      route: path.points.map(toCircuitPoint),
+      stroke_width: toCircuitLength(path.strokeWidthMils),
+      layers: toCircuitKeepoutLayers(path.layer),
+    })
+  }
   return keepouts
 }
 
@@ -319,11 +335,17 @@ function isDocumentationGraphicRecord(record: AltiumRecord): boolean {
   )
 }
 
-function isKeepoutGraphicRecord(record: AltiumRecord): boolean {
+function isKeepoutAreaRecord(record: AltiumRecord): boolean {
   return (
-    ["Arc", "Region", "RegionFill", "Track"].includes(
-      record.recordKind ?? "",
-    ) && isKeepoutRecord(record)
+    (record.recordKind === "Region" || record.recordKind === "RegionFill") &&
+    isKeepoutRecord(record)
+  )
+}
+
+function isKeepoutStrokeRecord(record: AltiumRecord): boolean {
+  return (
+    (record.recordKind === "Arc" || record.recordKind === "Track") &&
+    isKeepoutRecord(record)
   )
 }
 
