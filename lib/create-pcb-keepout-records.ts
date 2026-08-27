@@ -21,9 +21,9 @@ export function createPcbKeepoutRecords({
 
   for (const element of circuitJson) {
     if (element.type !== "pcb_keepout") continue
-    if (element.shape === "path") {
+    if (element.shape === "outline") {
       records.push(
-        ...createPcbKeepoutPathRecords({
+        ...createPcbKeepoutOutlineRecords({
           circuitToAltiumPcbPoint,
           element,
         }),
@@ -69,7 +69,7 @@ export function createPcbKeepoutRecords({
   return records
 }
 
-function createPcbKeepoutPathRecords({
+function createPcbKeepoutOutlineRecords({
   circuitToAltiumPcbPoint,
   element,
 }: {
@@ -77,7 +77,7 @@ function createPcbKeepoutPathRecords({
   element: CircuitElement
 }): string[] {
   const keepoutId = asString(element.pcb_keepout_id)
-  if (!keepoutId) throw new Error("PCB keepout path requires an ID")
+  if (!keepoutId) throw new Error("PCB keepout outline requires an ID")
   if (
     Array.isArray(element.excluded_pcb_component_ids) &&
     element.excluded_pcb_component_ids.length > 0
@@ -86,16 +86,16 @@ function createPcbKeepoutPathRecords({
       `PCB keepout ${keepoutId} excludes components, which Altium primitive keepouts cannot preserve`,
     )
   }
-  const circuitPoints = getPcbKeepoutPathPoints({ element, keepoutId })
+  const outline = getPcbKeepoutOutline({ element, keepoutId })
   const strokeWidthMm = distance.parse(element.stroke_width)
   if (strokeWidthMm <= 0) {
-    throw new Error(`PCB keepout path ${keepoutId} requires a stroke width`)
+    throw new Error(`PCB keepout outline ${keepoutId} requires a stroke width`)
   }
-  const circuitLayers = getPcbKeepoutPathLayers({ element, keepoutId })
+  const circuitLayers = getPcbKeepoutOutlineLayers({ element, keepoutId })
 
   return circuitLayers.flatMap((circuitLayer) =>
     createAltiumTrackRecords({
-      circuitPoints,
+      circuitPoints: outline,
       circuitToAltiumPcbPoint,
       isKeepout: true,
       layer: getAltiumKeepoutLayer(circuitLayer),
@@ -104,22 +104,22 @@ function createPcbKeepoutPathRecords({
   )
 }
 
-function getPcbKeepoutPathPoints({
+function getPcbKeepoutOutline({
   element,
   keepoutId,
 }: {
   element: CircuitElement
   keepoutId: string
 }): Point[] {
-  if (!Array.isArray(element.route) || element.route.length < 2) {
+  if (!Array.isArray(element.outline) || element.outline.length < 2) {
     throw new Error(
-      `PCB keepout path ${keepoutId} requires at least two points`,
+      `PCB keepout outline ${keepoutId} requires at least two points`,
     )
   }
-  return element.route.map((routePoint) => point.parse(routePoint))
+  return element.outline.map((outlinePoint) => point.parse(outlinePoint))
 }
 
-function getPcbKeepoutPathLayers({
+function getPcbKeepoutOutlineLayers({
   element,
   keepoutId,
 }: {
@@ -130,7 +130,7 @@ function getPcbKeepoutPathLayers({
     !Array.isArray(element.layers) ||
     element.layers.some((layer) => typeof layer !== "string")
   ) {
-    throw new Error(`PCB keepout path ${keepoutId} requires string layers`)
+    throw new Error(`PCB keepout outline ${keepoutId} requires string layers`)
   }
   return element.layers
 }

@@ -301,19 +301,19 @@ function convertKeepouts({
     })
   }
 
-  const keepoutStrokePaths = getAltiumPcbAnnotationPaths({
+  const keepoutOutlines = getAltiumPcbAnnotationPaths({
     componentIds,
     document,
     includeRecord: isKeepoutStrokeRecord,
   })
-  for (const [pathIndex, path] of keepoutStrokePaths.entries()) {
+  for (const [outlineIndex, outline] of keepoutOutlines.entries()) {
     keepouts.push({
       type: "pcb_keepout",
-      pcb_keepout_id: `pcb_keepout_path_${pathIndex}`,
-      shape: "path",
-      route: path.points.map(toCircuitPoint),
-      stroke_width: toCircuitLength(path.strokeWidthMils),
-      layers: toCircuitKeepoutLayers(path.layer),
+      pcb_keepout_id: `pcb_keepout_outline_${outlineIndex}`,
+      shape: "outline",
+      outline: outline.points.map(toCircuitPoint),
+      stroke_width: toCircuitLength(outline.strokeWidthMils),
+      layers: toCircuitKeepoutLayers(outline.layer),
     })
   }
   return keepouts
