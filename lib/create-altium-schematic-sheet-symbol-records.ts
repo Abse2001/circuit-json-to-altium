@@ -1,3 +1,4 @@
+import { createAltiumSchematicNoConnectRecordFields } from "./create-altium-schematic-no-connect-record-fields"
 import {
   asNumber,
   asPoint,
@@ -5,7 +6,12 @@ import {
   isCircuitElement,
   sanitizeField,
 } from "./format"
-import type { CircuitElement, Point, SchematicSheetId } from "./types"
+import type {
+  CircuitElement,
+  Point,
+  SchematicSheetId,
+  SourcePortId,
+} from "./types"
 
 export type AltiumSchematicChildSheet = {
   filename: string
@@ -24,6 +30,7 @@ export type AltiumSchematicSheetSymbolPlan = {
 
 type AltiumSchematicSheetEntryPlan = {
   distanceFromTop: number
+  doNotConnect: boolean
   ioType: number
   name: string
   side: 0 | 1
@@ -41,6 +48,7 @@ type CreateAltiumSchematicSheetSymbolRecordFieldsParams = {
 }
 
 const ALTIUM_SHEET_ENTRY_SPACING = 10
+const ALTIUM_SHEET_ENTRY_DISTANCE_UNIT = 10
 const ALTIUM_SHEET_SYMBOL_MINIMUM_HEIGHT = 60
 const ALTIUM_SHEET_SYMBOL_MINIMUM_WIDTH = 160
 const ALTIUM_SCHEMATIC_COMPONENT_OUTLINE_COLOR = 132
@@ -50,13 +58,10 @@ export function createAltiumSchematicSheetSymbolPlans({
   childSheets,
   circuitJson,
 }: CreateAltiumSchematicSheetSymbolPlansParams): AltiumSchematicSheetSymbolPlan[] {
-  const sourcePortNames = new Map(
+  const sourcePortsById = new Map<SourcePortId, CircuitElement>(
     circuitJson
       .filter((element) => element.type === "source_port")
-      .map((sourcePort) => [
-        asString(sourcePort.source_port_id),
-        asString(sourcePort.name),
-      ]),
+      .map((sourcePort) => [asString(sourcePort.source_port_id), sourcePort]),
   )
 
   return childSheets.map((childSheet) => {
@@ -76,10 +81,11 @@ export function createAltiumSchematicSheetSymbolPlans({
     )
     const sideEntryCounts: Record<0 | 1, number> = { 0: 0, 1: 0 }
     const entries = childPorts.flatMap((schematicPort) => {
+      const sourcePort = sourcePortsById.get(
+        asString(schematicPort.source_port_id),
+      )
       const name =
-        asString(schematicPort.display_pin_label) ||
-        sourcePortNames.get(asString(schematicPort.source_port_id)) ||
-        ""
+        asString(schematicPort.display_pin_label) || asString(sourcePort?.name)
       if (!name) return []
 
       const hasInputArrow = schematicPort.has_input_arrow === true
@@ -94,6 +100,7 @@ export function createAltiumSchematicSheetSymbolPlans({
                 schematicPort,
               })
             : sideEntryCounts[side],
+          doNotConnect: sourcePort?.do_not_connect === true,
           ioType: hasInputArrow
             ? hasOutputArrow
               ? 3
@@ -128,6 +135,29 @@ export function createAltiumSchematicSheetSymbolPlans({
       ),
     }
   })
+}
+
+export function createAltiumSchematicSheetEntryNoConnectRecordFields({
+  location,
+  plan,
+}: {
+  location: Point
+  plan: AltiumSchematicSheetSymbolPlan
+}): string[][] {
+  return plan.entries.flatMap((entry) =>
+    entry.doNotConnect
+      ? [
+          createAltiumSchematicNoConnectRecordFields({
+            altiumNoConnectPosition: {
+              x: location.x + (entry.side === 1 ? plan.width : 0),
+              y:
+                location.y -
+                entry.distanceFromTop * ALTIUM_SHEET_ENTRY_DISTANCE_UNIT,
+            },
+          }),
+        ]
+      : [],
+  )
 }
 
 export function createAltiumSchematicSheetSymbolOwnedRecordFields({

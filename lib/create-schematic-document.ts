@@ -6,6 +6,7 @@ import { createAltiumSchematicOffSheetPortRecordFields } from "./create-altium-s
 import { createAltiumSchematicSheetAnnotationRecordFields } from "./create-altium-schematic-sheet-annotation-record-fields"
 import {
   type AltiumSchematicChildSheet,
+  createAltiumSchematicSheetEntryNoConnectRecordFields,
   createAltiumSchematicSheetSymbolOwnedRecordFields,
   createAltiumSchematicSheetSymbolPlans,
   createAltiumSchematicSheetSymbolRecordFields,
@@ -383,6 +384,14 @@ export function createSchematicDocument({
     )) {
       addSchematicRecord(recordFields, schematicRecordContext)
     }
+    for (const recordFields of createAltiumSchematicSheetEntryNoConnectRecordFields(
+      {
+        location,
+        plan: placedPlan,
+      },
+    )) {
+      addSchematicRecord(recordFields, schematicRecordContext)
+    }
   }
 
   const sourceComponents = new Map<SourceComponentId, CircuitElement>(
@@ -734,6 +743,10 @@ export function createSchematicDocument({
       !asString(element.schematic_component_id),
   )) {
     const sourcePort = sourcePorts.get(asString(schematicPort.source_port_id))
+    const isStandaloneNoConnectMarker =
+      sourcePort?.do_not_connect === true &&
+      schematicPort.is_internal_circuit_port !== true
+    if (isStandaloneNoConnectMarker) continue
     const portName =
       sanitizeField(schematicPort.display_pin_label) ||
       sanitizeField(sourcePort?.name)

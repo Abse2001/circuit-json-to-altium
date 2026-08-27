@@ -226,13 +226,10 @@ function getSchematicComponentTextSignatures(
 function getOffSheetPortSignatures(
   circuitJson: CircuitElement[],
 ): SchematicOffSheetPortSignature[] {
-  const sourcePortNames = new Map<SourcePortId, string>(
+  const sourcePortsById = new Map<SourcePortId, CircuitElement>(
     circuitJson
       .filter((element) => element.type === "source_port")
-      .map((sourcePort) => [
-        asString(sourcePort.source_port_id),
-        asString(sourcePort.name),
-      ]),
+      .map((sourcePort) => [asString(sourcePort.source_port_id), sourcePort]),
   )
   return circuitJson.flatMap((schematicPort) => {
     if (
@@ -241,6 +238,14 @@ function getOffSheetPortSignatures(
     ) {
       return []
     }
+    const sourcePort = sourcePortsById.get(
+      asString(schematicPort.source_port_id),
+    )
+    const isStandaloneNoConnectMarker =
+      !asString(schematicPort.schematic_sheet_id) &&
+      schematicPort.is_internal_circuit_port !== true &&
+      sourcePort?.do_not_connect === true
+    if (isStandaloneNoConnectMarker) return []
     return [
       {
         facingDirection: asString(schematicPort.facing_direction),
@@ -248,8 +253,7 @@ function getOffSheetPortSignatures(
         hasOutputArrow: schematicPort.has_output_arrow === true,
         name:
           asString(schematicPort.display_pin_label) ||
-          sourcePortNames.get(asString(schematicPort.source_port_id)) ||
-          "",
+          asString(sourcePort?.name),
       },
     ]
   })
@@ -392,6 +396,13 @@ function getStringFields({
 
 function getSchematicGeometryPoints(circuitJson: CircuitElement[]): Point[] {
   const points: Point[] = []
+  const noConnectSourcePortIds = new Set<SourcePortId>(
+    circuitJson.flatMap((element) =>
+      element.type === "source_port" && element.do_not_connect === true
+        ? [asString(element.source_port_id)]
+        : [],
+    ),
+  )
   for (const element of circuitJson) {
     if (
       element.type === "schematic_component" ||
@@ -407,6 +418,14 @@ function getSchematicGeometryPoints(circuitJson: CircuitElement[]): Point[] {
         element.type === "schematic_port" &&
         asString(element.schematic_sheet_id) &&
         !asString(element.schematic_component_id)
+      ) {
+        continue
+      }
+      if (
+        element.type === "schematic_port" &&
+        !asString(element.schematic_component_id) &&
+        element.is_internal_circuit_port !== true &&
+        noConnectSourcePortIds.has(asString(element.source_port_id))
       ) {
         continue
       }
