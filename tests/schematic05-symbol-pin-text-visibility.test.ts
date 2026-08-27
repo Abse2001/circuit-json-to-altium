@@ -95,21 +95,20 @@ test("uses native pin text visibility for built-in and boxed symbols", async () 
     .getOwnedRecords(chip)
     .find((record) => record.recordKind === "2")
 
-  expect(sheetRecord?.getNumber("SIZE1")).toBe(8)
-  expect(sheetRecord?.getNumber("SIZE2")).toBe(8)
+  expect(sheetRecord?.getNumber("SIZE1")).toBe(4)
+  expect(sheetRecord?.getNumber("SIZE2")).toBe(4)
   expect(resistorPins.map((pin) => pin.getNumber("PINCONGLOMERATE"))).toEqual([
     34, 32,
   ])
   expect(
     resistorPins.map((pin) => ({
-      color: pin.getNumber("COLOR"),
       length: pin.getNumber("PINLENGTH"),
       x: pin.getNumber("LOCATION.X"),
       y: pin.getNumber("LOCATION.Y"),
     })),
   ).toEqual([
-    { color: 132, length: 4, x: 44, y: 63 },
-    { color: 132, length: 4, x: 60, y: 63 },
+    { length: 2, x: 102, y: 100 },
+    { length: 2, x: 110, y: 100 },
   ])
   expect(chipPin?.getNumber("PINCONGLOMERATE")).toBe(58)
   expectValidSchematic(schematic)

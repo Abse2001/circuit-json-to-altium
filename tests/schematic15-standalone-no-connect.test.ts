@@ -25,7 +25,7 @@ test("round-trips a standalone Altium No ERC marker without adding a port symbol
     type: "source_port",
   })
   expect(schematicPort).toMatchObject({
-    center: { x: 3, y: 3.5 },
+    center: { x: 6, y: 7 },
     source_port_id: sourcePort?.source_port_id,
     type: "schematic_port",
   })

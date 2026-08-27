@@ -1,5 +1,4 @@
 import { getAltiumColorFromCss } from "./altium-color"
-import { ALTIUM_UNITS_PER_CIRCUIT_UNIT } from "./altium-schematic-dimensions"
 import { createAltiumSchematicFontTable } from "./create-altium-schematic-font-table"
 import { createAltiumSchematicNetLabelRecordFields } from "./create-altium-schematic-net-label-record-fields"
 import { createAltiumSchematicNoConnectRecordFields } from "./create-altium-schematic-no-connect-record-fields"
@@ -92,9 +91,6 @@ const ALTIUM_PIN_DESIGNATOR_VISIBLE_FLAG = 0x10
 const ALTIUM_PIN_CLOCK_SYMBOL = 3
 const ALTIUM_PIN_INVERSION_SYMBOL = 1
 const ALTIUM_SCHEMATIC_DEFAULT_COLOR = 0x37_29_1f
-const ALTIUM_SCHEMATIC_COMPONENT_FILL_COLOR = 0x00_c2_ff_ff
-const ALTIUM_SCHEMATIC_PRIMARY_COLOR = 0x00_00_84
-const ALTIUM_SCHEMATIC_TRACE_COLOR = 0x00_96_00
 const ALTIUM_PIN_ORIENTATION_BY_FACING_DIRECTION: Record<string, number> = {
   left: 2,
   right: 0,
@@ -350,16 +346,10 @@ export function createSchematicDocument({
         ? plan.placementComponent.size
         : {}
       const width = circuitToAltiumSchematicLength(
-        asPositiveNumber(
-          circuitSize.width,
-          plan.width / ALTIUM_UNITS_PER_CIRCUIT_UNIT,
-        ),
+        asPositiveNumber(circuitSize.width, plan.width / 20),
       )
       const height = circuitToAltiumSchematicLength(
-        asPositiveNumber(
-          circuitSize.height,
-          plan.height / ALTIUM_UNITS_PER_CIRCUIT_UNIT,
-        ),
+        asPositiveNumber(circuitSize.height, plan.height / 20),
       )
       const altiumCenter = circuitToAltiumSchematicPoint(circuitCenter)
       location = {
@@ -571,9 +561,9 @@ export function createSchematicDocument({
           `CORNER.X=${fallbackSchematicBoxBounds.right}`,
           `CORNER.Y=${fallbackSchematicBoxBounds.top}`,
           "LINEWIDTH=1",
-          `COLOR=${ALTIUM_SCHEMATIC_PRIMARY_COLOR}`,
-          `AREACOLOR=${ALTIUM_SCHEMATIC_COMPONENT_FILL_COLOR}`,
-          "ISSOLID=T",
+          "COLOR=136",
+          "AREACOLOR=16777215",
+          "ISSOLID=F",
         ],
         schematicRecordContext,
       )
@@ -720,10 +710,14 @@ export function createSchematicDocument({
         altiumPinTextVisibilityFlags |
         altiumPinOrientation
       const explicitPinText = pinNameText ?? pinNumberText
-      const pinColor = getAltiumColorFromCss({
-        cssColor: asString(explicitPinText?.color),
-        fallbackAltiumColor: ALTIUM_SCHEMATIC_PRIMARY_COLOR,
-      })
+      const pinColorRecordFields = explicitPinText
+        ? [
+            `COLOR=${getAltiumColorFromCss({
+              cssColor: asString(explicitPinText.color),
+              fallbackAltiumColor: ALTIUM_SCHEMATIC_DEFAULT_COLOR,
+            })}`,
+          ]
+        : []
       addSchematicRecord(
         [
           "RECORD=2",
@@ -741,7 +735,7 @@ export function createSchematicDocument({
           ...(schematicPort.is_drawn_with_inversion_circle === true
             ? [`SYMBOL_OUTEREDGE=${ALTIUM_PIN_INVERSION_SYMBOL}`]
             : []),
-          `COLOR=${pinColor}`,
+          ...pinColorRecordFields,
           "FONTID=2",
         ],
         schematicRecordContext,
@@ -804,7 +798,7 @@ export function createSchematicDocument({
           `Y1=${altiumStartPoint.y}`,
           `X2=${altiumEndPoint.x}`,
           `Y2=${altiumEndPoint.y}`,
-          `COLOR=${ALTIUM_SCHEMATIC_TRACE_COLOR}`,
+          "COLOR=34816",
         ],
         schematicRecordContext,
       )
@@ -829,7 +823,7 @@ export function createSchematicDocument({
           "RECORD=29",
           `LOCATION.X=${altiumJunctionPoint.x}`,
           `LOCATION.Y=${altiumJunctionPoint.y}`,
-          `COLOR=${ALTIUM_SCHEMATIC_TRACE_COLOR}`,
+          "COLOR=34816",
         ],
         schematicRecordContext,
       )

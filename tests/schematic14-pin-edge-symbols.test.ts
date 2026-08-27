@@ -101,13 +101,7 @@ test("renders a schematic pin edge symbol round trip", async () => {
   expect(invertedClockPin?.getNumber("SYMBOL_OUTEREDGE")).toBe(1)
 
   const sourceSvg = await convertCircuitJsonToSchematicSvg(circuitJson)
-  const altiumSvg = serializeAltiumSheetToSvg(altiumSchematic, {
-    backgroundColor: "rgb(245, 241, 237)",
-    height: 600,
-    margin: 0,
-    showBorder: false,
-    width: 1200,
-  })
+  const altiumSvg = serializeAltiumSheetToSvg(altiumSchematic)
   await expect(createSideBySideSvg(sourceSvg, altiumSvg)).toMatchSvgSnapshot(
     import.meta.path,
   )

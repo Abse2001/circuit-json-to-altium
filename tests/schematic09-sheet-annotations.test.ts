@@ -93,7 +93,7 @@ test("writes schematic sheet annotations as native records", async () => {
   }).toEqual({
     fontCount: 5,
     fontNames: ["Times New Roman", "Times New Roman"],
-    fontSizesPoints: [24, 48],
+    fontSizesPoints: [12, 24],
   })
   expect(
     labels.map((label) => ({
@@ -115,7 +115,7 @@ test("writes schematic sheet annotations as native records", async () => {
     areaColor: 0x66_55_44,
     color: 0x33_22_11,
     isSolid: true,
-    lineWidth: 4,
+    lineWidth: 2,
   })
   expect({
     polygonAreaColor: polygon?.getNumber("AREACOLOR"),
