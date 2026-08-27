@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1000" height="813" viewBox="0 0 842.5197 685.0394" role="img" aria-label="Altium PCB" class="altium-pcb" data-renderer="altiumts">
+  <title>Altium PCB</title>
+  <rect width="100%" height="100%" fill="#071a16"/>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <polygon data-record="BoardOutline" points="27.5591,657.4804 814.9607,657.4804 814.9607,27.5591 27.5591,27.5591 27.5591,657.4804" fill="#123d32" stroke="#6ee7b7" stroke-width="3"/>
+    <line data-record="Track" data-layer="KEEPOUT" x1="145.6693" y1="539.3702" x2="618.1103" y2="539.3702" stroke="#a855f7" stroke-width="9.8425"/>
+    <line data-record="Track" data-layer="KEEPOUT" x1="618.1103" y1="539.3702" x2="696.8504" y2="460.63" stroke="#a855f7" stroke-width="9.8425"/>
+    <line data-record="Track" data-layer="KEEPOUT" x1="696.8504" y1="460.63" x2="696.8504" y2="145.6694" stroke="#a855f7" stroke-width="9.8425"/>
+    <line data-record="Track" data-layer="KEEPOUT" x1="696.8504" y1="145.6694" x2="145.6693" y2="145.6694" stroke="#a855f7" stroke-width="9.8425"/>
+    <line data-record="Track" data-layer="KEEPOUT" x1="145.6693" y1="145.6694" x2="145.6693" y2="539.3702" stroke="#a855f7" stroke-width="9.8425"/>
+  </g>
+</svg>

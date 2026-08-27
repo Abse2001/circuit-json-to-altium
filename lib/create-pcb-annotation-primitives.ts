@@ -13,6 +13,7 @@ type CreateAltiumTrackRecordsOptions = {
   circuitPoints: readonly Point[]
   circuitToAltiumPcbPoint: PointTransform
   closePath?: boolean
+  isKeepout?: boolean
   layer: string
   strokeWidthMm: number
 }
@@ -22,6 +23,7 @@ export function createAltiumTrackRecords({
   circuitPoints,
   circuitToAltiumPcbPoint,
   closePath = false,
+  isKeepout = false,
   layer,
   strokeWidthMm,
 }: CreateAltiumTrackRecordsOptions): string[] {
@@ -42,6 +44,7 @@ export function createAltiumTrackRecords({
           ? []
           : [`COMPONENT=${altiumComponentIndex}`]),
         `LAYER=${layer}`,
+        ...(isKeepout ? ["KEEPOUT=TRUE"] : []),
         "LOCKED=FALSE",
         `X1=${formatMil(altiumStart.x)}`,
         `Y1=${formatMil(altiumStart.y)}`,

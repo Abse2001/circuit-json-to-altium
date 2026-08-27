@@ -2,6 +2,7 @@ import { pcb_keepout } from "circuit-json"
 import {
   createAltiumFillRecord,
   createAltiumRegionRecord,
+  createAltiumTrackRecords,
   createCirclePoints,
 } from "./create-pcb-annotation-primitives"
 import type { CircuitElement, PointTransform } from "./types"
@@ -25,26 +26,47 @@ export function createPcbKeepoutRecords({
         `PCB keepout ${keepout.pcb_keepout_id} excludes components, which Altium primitive keepouts cannot preserve`,
       )
     }
+    if (keepout.shape === "outline" && keepout.stroke_width <= 0) {
+      throw new Error(
+        `PCB keepout outline ${keepout.pcb_keepout_id} requires a stroke width`,
+      )
+    }
     for (const layer of keepout.layers.map(getAltiumKeepoutLayer)) {
-      records.push(
-        keepout.shape === "rect"
-          ? createAltiumFillRecord({
+      if (keepout.shape === "rect") {
+        records.push(
+          createAltiumFillRecord({
+            center: keepout.center,
+            circuitToAltiumPcbPoint,
+            heightMm: keepout.height,
+            isKeepout: true,
+            layer,
+            widthMm: keepout.width,
+          }),
+        )
+        continue
+      }
+      if (keepout.shape === "circle") {
+        records.push(
+          createAltiumRegionRecord({
+            circuitPoints: createCirclePoints({
               center: keepout.center,
-              circuitToAltiumPcbPoint,
-              heightMm: keepout.height,
-              isKeepout: true,
-              layer,
-              widthMm: keepout.width,
-            })
-          : createAltiumRegionRecord({
-              circuitPoints: createCirclePoints({
-                center: keepout.center,
-                radiusMm: keepout.radius,
-              }),
-              circuitToAltiumPcbPoint,
-              isKeepout: true,
-              layer,
+              radiusMm: keepout.radius,
             }),
+            circuitToAltiumPcbPoint,
+            isKeepout: true,
+            layer,
+          }),
+        )
+        continue
+      }
+      records.push(
+        ...createAltiumTrackRecords({
+          circuitPoints: keepout.outline,
+          circuitToAltiumPcbPoint,
+          isKeepout: true,
+          layer,
+          strokeWidthMm: keepout.stroke_width,
+        }),
       )
     }
   }
