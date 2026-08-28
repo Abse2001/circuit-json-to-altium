@@ -4,6 +4,14 @@ import { convertCircuitJsonToSchematicSvg } from "circuit-to-svg"
 import { Circuit } from "tscircuit"
 import { CircuitJsonToAltiumConverter } from "../lib"
 import { createSideBySideSvg } from "./fixtures/create-side-by-side-svg"
+import { cropSvgViewBox } from "./fixtures/crop-svg-view-box"
+
+const POWER_DETAIL_VIEW_BOX = {
+  x: 135,
+  y: 120,
+  width: 130,
+  height: 65,
+}
 
 test("snapshots a VCC and GND power-label detail", async () => {
   const circuit = new Circuit()
@@ -55,17 +63,15 @@ test("snapshots a VCC and GND power-label detail", async () => {
   ])
 
   const circuitJsonSvg = await convertCircuitJsonToSchematicSvg(circuitJson)
-  const altiumSheetSvg = serializeAltiumSheetToSvg(altiumSchematic, {
-    backgroundColor: "rgb(245, 241, 237)",
-    height: 600,
-    margin: 0,
-    showBorder: false,
-    width: 1200,
-  })
-  // Crop only this detail snapshot; the generated Altium sheet remains 400x300.
-  const altiumSvg = altiumSheetSvg.replace(
-    'viewBox="0 0 400 300"',
-    'viewBox="80 155 140 70"',
+  const altiumSvg = cropSvgViewBox(
+    serializeAltiumSheetToSvg(altiumSchematic, {
+      backgroundColor: "rgb(245, 241, 237)",
+      height: 600,
+      margin: 0,
+      showBorder: false,
+      width: 1200,
+    }),
+    POWER_DETAIL_VIEW_BOX,
   )
   await expect(
     createSideBySideSvg(circuitJsonSvg, altiumSvg),
