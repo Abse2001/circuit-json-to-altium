@@ -37,6 +37,11 @@ function appendSchematicSymbolPrimitivePoints({
   element: CircuitElement
   points: Point[]
 }): void {
+  if (element.type === "schematic_text") {
+    const position = asPoint(element.position)
+    if (position) points.push(position)
+    return
+  }
   if (element.type === "schematic_line") {
     points.push(
       { x: asNumber(element.x1), y: asNumber(element.y1) },

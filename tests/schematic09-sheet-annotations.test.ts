@@ -92,7 +92,7 @@ test("writes schematic sheet annotations as native records", async () => {
     ],
   }).toEqual({
     fontCount: 5,
-    fontNames: ["Times New Roman", "Times New Roman"],
+    fontNames: ["Arial", "Arial"],
     fontSizesPoints: [12, 24],
   })
   expect(

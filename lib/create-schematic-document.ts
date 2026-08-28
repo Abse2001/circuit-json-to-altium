@@ -27,6 +27,7 @@ import {
 } from "./format"
 import { getAltiumSchematicTextPresentation } from "./get-altium-schematic-text-presentation"
 import { getSchematicTransform } from "./get-schematic-transform"
+import { isSchematicSheetAnnotation } from "./is-schematic-sheet-annotation"
 import { isSchematicSymbolPrimitive } from "./is-schematic-symbol-primitive"
 import type {
   CircuitElement,
@@ -164,10 +165,10 @@ function getSchematicSymbolPrimitives({
       primitiveSymbolId === schematicSymbolId
     )
   })
-  if (componentPrimitives.length > 0 || !schematicSymbolId) {
-    return componentPrimitives
-  }
-  return maps.bySymbolId.get(schematicSymbolId) ?? []
+  const symbolPrimitives = schematicSymbolId
+    ? (maps.bySymbolId.get(schematicSymbolId) ?? [])
+    : []
+  return [...new Set([...componentPrimitives, ...symbolPrimitives])]
 }
 
 function getFallbackSchematicBoxBounds({
@@ -422,8 +423,7 @@ export function createSchematicDocument({
   >()
   const sheetTexts = schematicElements.filter(
     (element) =>
-      element.type === "schematic_text" &&
-      !asString(element.schematic_component_id),
+      element.type === "schematic_text" && isSchematicSheetAnnotation(element),
   )
   const consumedSheetTexts = new Set<CircuitElement>()
   const schematicSymbolPrimitiveMaps =
@@ -439,7 +439,8 @@ export function createSchematicDocument({
     ])
   }
   for (const schematicText of schematicElements.filter(
-    (element) => element.type === "schematic_text",
+    (element) =>
+      element.type === "schematic_text" && !isSchematicSymbolPrimitive(element),
   )) {
     appendElementToIdMap({
       element: schematicText,
@@ -530,20 +531,25 @@ export function createSchematicDocument({
         altiumComponentRecordIndex,
         circuitToAltiumSchematicLength,
         circuitToAltiumSchematicPoint,
+        fontTable: altiumSchematicFontTable,
         graphic,
       })
       return recordFields ? [recordFields] : []
     })
-    const schematicSymbolRecords =
-      customSymbolPrimitiveRecordFields.length === 0
-        ? createAltiumSchematicSymbolRecords({
-            altiumComponentRecordIndex,
-            circuitComponentCenter,
-            circuitToAltiumSchematicPoint,
-            symbolName: asString(schematicComponent.symbol_name),
-          })
-        : undefined
-    if (customSymbolPrimitiveRecordFields.length > 0) {
+    const hasCustomSymbolPrimitives =
+      customSymbolPrimitiveRecordFields.length > 0
+    const shouldHideInferredDesignator =
+      !designatorText &&
+      (hasExplicitComponentTextPresentation || hasCustomSymbolPrimitives)
+    const schematicSymbolRecords = !hasCustomSymbolPrimitives
+      ? createAltiumSchematicSymbolRecords({
+          altiumComponentRecordIndex,
+          circuitComponentCenter,
+          circuitToAltiumSchematicPoint,
+          symbolName: asString(schematicComponent.symbol_name),
+        })
+      : undefined
+    if (hasCustomSymbolPrimitives) {
       for (const primitiveRecordFields of customSymbolPrimitiveRecordFields) {
         addSchematicRecord(primitiveRecordFields, schematicRecordContext)
       }
@@ -607,7 +613,7 @@ export function createSchematicDocument({
         `TEXT=${designator}`,
         `COLOR=${designatorPresentation.color}`,
         "SHOWNAME=F",
-        `ISHIDDEN=${hasExplicitComponentTextPresentation && !designatorText ? "T" : "F"}`,
+        `ISHIDDEN=${shouldHideInferredDesignator ? "T" : "F"}`,
         `ORIENTATION=${designatorPresentation.orientation}`,
         `JUSTIFICATION=${designatorPresentation.justification}`,
       ],
@@ -649,7 +655,8 @@ export function createSchematicDocument({
       })
       const altiumPinOrientation =
         ALTIUM_PIN_ORIENTATION_BY_FACING_DIRECTION[facingDirection] ?? 2
-      const isPinTextVisibleByDefault = !schematicSymbolRecords
+      const isPinTextVisibleByDefault =
+        !schematicSymbolRecords && !hasCustomSymbolPrimitives
       const pinName =
         sanitizeField(schematicPort.display_pin_label) ||
         sanitizeField(sourcePort?.name) ||
@@ -693,13 +700,20 @@ export function createSchematicDocument({
               renderedText: pinDesignator,
             })
           : undefined
-      const isPinNameVisible =
-        pinNameText === undefined &&
+      const hasVisibleCustomPinName =
+        hasCustomSymbolPrimitives &&
+        typeof schematicPort.display_pin_label === "string"
+      const hasVisibleRegularPinName =
+        !hasCustomSymbolPrimitives &&
         (hasExplicitComponentTextPresentation
           ? typeof schematicPort.display_pin_label === "string"
           : isPinTextVisibleByDefault)
+      const isPinNameVisible =
+        pinNameText === undefined &&
+        (hasVisibleCustomPinName || hasVisibleRegularPinName)
       const isPinNumberVisible =
         pinNumberText === undefined &&
+        !hasCustomSymbolPrimitives &&
         (hasExplicitComponentTextPresentation
           ? typeof schematicPort.pin_number === "number"
           : isPinTextVisibleByDefault)
