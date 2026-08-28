@@ -17,7 +17,10 @@ export class BuildSchematicDocumentsStage extends ConverterStage<
     const childSheets: AltiumSchematicChildSheet[] = sheets.map(
       (sheet, index) => ({
         filename: `${this.context.safeProjectName}-${String(index + 1).padStart(2, "0")}.SchDoc`,
-        name: asString(sheet.name) || `Sheet ${index + 1}`,
+        name:
+          asString(sheet.display_name) ||
+          asString(sheet.name) ||
+          `Sheet ${index + 1}`,
         schematicSheetId: asString(sheet.schematic_sheet_id),
         subcircuitId: asString(sheet.subcircuit_id) || undefined,
       }),

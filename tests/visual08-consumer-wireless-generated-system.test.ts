@@ -65,7 +65,7 @@ test("reproduces the Consumer Wireless Module generated system", async () => {
   ).toEqual(
     sourceSheets.map((sheet, index) => ({
       fileName: `consumer-wireless-module-${String(index + 1).padStart(2, "0")}.SchDoc`,
-      name: String(sheet.name),
+      name: String(Reflect.get(sheet, "display_name") ?? sheet.name),
     })),
   )
 
