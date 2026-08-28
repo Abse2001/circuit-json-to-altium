@@ -89,20 +89,20 @@ test("writes componentless schematic ports as native off-sheet ports", async () 
     {
       ioType: 0,
       name: "UNSPECIFIED",
-      position: { x: 100, y: 100 },
+      position: { x: 140, y: 150 },
       width: 88,
     },
-    { ioType: 1, name: "INPUT", position: { x: 140, y: 100 }, width: 40 },
+    { ioType: 1, name: "INPUT", position: { x: 180, y: 150 }, width: 40 },
     {
       ioType: 2,
       name: "OUTPUT_SIGNAL",
-      position: { x: 180, y: 100 },
+      position: { x: 220, y: 150 },
       width: 104,
     },
     {
       ioType: 3,
       name: "BIDIRECTIONAL",
-      position: { x: 220, y: 100 },
+      position: { x: 260, y: 150 },
       width: 104,
     },
   ])

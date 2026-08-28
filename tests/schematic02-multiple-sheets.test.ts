@@ -23,6 +23,8 @@ test("creates a root schematic with sorted child sheet links", async () => {
       type: "schematic_sheet",
       schematic_sheet_id: "sheet-a",
       sheet_index: 10,
+      name: "power_supply",
+      display_name: "Power Supply",
     },
     sourceComponent("sc-a", "A1"),
     sourceComponent("sc-b", "B1"),
@@ -116,7 +118,7 @@ test("creates a root schematic with sorted child sheet links", async () => {
       name,
     })),
   ).toEqual([
-    { fileName: "multi-01.SchDoc", name: "Sheet 1" },
+    { fileName: "multi-01.SchDoc", name: "Power Supply" },
     { fileName: "multi-02.SchDoc", name: "Sheet 2" },
   ])
   expect(
