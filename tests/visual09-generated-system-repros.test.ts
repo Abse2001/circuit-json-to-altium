@@ -14,6 +14,18 @@ interface GeneratedSystemRepro {
   expectedSheetNames: string[]
 }
 
+const expectSchematicPinTextCentered = (svg: string) => {
+  const schematicPinGroups = svg.match(/<g data-record="2">.*?<\/g>/g) ?? []
+  const pinTextBaselines = schematicPinGroups.flatMap((pinGroup) =>
+    [...pinGroup.matchAll(/dominant-baseline="([^"]+)"/g)].map(
+      (match) => match[1],
+    ),
+  )
+  expect(pinTextBaselines.every((baseline) => baseline === "central")).toBe(
+    true,
+  )
+}
+
 const repros: GeneratedSystemRepro[] = [
   {
     fixtureName: "generated-system-automotive-mirror.circuit.json",
@@ -121,12 +133,10 @@ for (const repro of repros) {
       const circuitJsonSvg = convertCircuitJsonToSchematicSvg(circuitJson, {
         schematicSheetId: String(sourceSheet.schematic_sheet_id),
       })
-      snapshots.push(
-        createSideBySideSvg(
-          circuitJsonSvg,
-          serializeAltiumSheetToSvg(generatedSchematic),
-        ),
-      )
+      const generatedSchematicSvg =
+        serializeAltiumSheetToSvg(generatedSchematic)
+      expectSchematicPinTextCentered(generatedSchematicSvg)
+      snapshots.push(createSideBySideSvg(circuitJsonSvg, generatedSchematicSvg))
       snapshotNames.push(
         `${repro.projectName}-${String(index + 1).padStart(2, "0")}-${String(sourceSheet.name).replaceAll("_", "-")}`,
       )
