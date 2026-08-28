@@ -280,6 +280,12 @@ export function createSchematicDocument({
     childSheets,
     circuitJson,
   })
+  const hasRenderableSchematicContent = schematicElements.some(
+    (element) =>
+      element.type !== "schematic_graphic" &&
+      element.type !== "schematic_group" &&
+      element.type !== "schematic_symbol",
+  )
   const explicitlyPositionedSheetSymbolComponents = new Set(
     sheetSymbolPlans.flatMap((plan) =>
       plan.placementComponent ? [plan.placementComponent] : [],
@@ -303,8 +309,9 @@ export function createSchematicDocument({
     ...automaticallyPlacedSheetSymbolPlans.map((plan) => plan.height),
     0,
   )
-  const sheetSymbolStartX =
-    schematicElements.length > 0 ? contentWidth + 40 : 60
+  const sheetSymbolStartX = hasRenderableSchematicContent
+    ? contentWidth + 40
+    : 60
   const sheetSymbolLayoutWidth =
     sheetSymbolColumnCount * sheetSymbolColumnWidth +
     Math.max(sheetSymbolColumnCount - 1, 0) * 40
