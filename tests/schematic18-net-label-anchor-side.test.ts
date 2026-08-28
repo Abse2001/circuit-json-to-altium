@@ -28,14 +28,16 @@ test("positions net-label text from its Circuit JSON anchor side", async () => {
 
   expect(
     schematic.netLabels.map((label) => ({
+      color: label.getNumber("COLOR"),
       justification: label.getNumber("JUSTIFICATION"),
+      orientation: label.getNumber("ORIENTATION"),
       text: label.getDecoded("TEXT"),
     })),
   ).toEqual([
-    { justification: 1, text: "BOTTOM" },
-    { justification: 3, text: "LEFT" },
-    { justification: 5, text: "RIGHT" },
-    { justification: 7, text: "TOP" },
+    { color: 132, justification: 1, orientation: 0, text: "BOTTOM" },
+    { color: 132, justification: 3, orientation: 0, text: "LEFT" },
+    { color: 132, justification: 5, orientation: 0, text: "RIGHT" },
+    { color: 132, justification: 7, orientation: 0, text: "TOP" },
   ])
   expectValidSchematic(schematic)
 })

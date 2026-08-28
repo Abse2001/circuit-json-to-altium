@@ -5,6 +5,10 @@ import type {
 } from "schematic-symbols"
 import type { Matrix } from "transformation-matrix"
 import { applyToPoint } from "transformation-matrix"
+import {
+  ALTIUM_SCHEMATIC_GRAPHIC_COLOR,
+  ALTIUM_SCHEMATIC_WHITE,
+} from "./altium-schematic-colors"
 import { pointsEqual } from "./format"
 import type { Point, PointTransform } from "./types"
 
@@ -20,9 +24,6 @@ type CreateAltiumSchematicGraphicRecordFieldsOptions = {
   graphicPrimitive: SchematicGraphicPrimitive
   symbolMapping: AltiumSchematicSymbolMapping
 }
-
-const ALTIUM_SCHEMATIC_PRIMARY_COLOR = 132
-const ALTIUM_SCHEMATIC_WHITE = 16_777_215
 
 export function createAltiumSchematicGraphicRecordFields({
   graphicPrimitive,
@@ -78,9 +79,9 @@ function createAltiumPathRecordFields({
       `X${pointIndex + 1}=${altiumPoint.x}`,
       `Y${pointIndex + 1}=${altiumPoint.y}`,
     ]),
-    `COLOR=${ALTIUM_SCHEMATIC_PRIMARY_COLOR}`,
+    `COLOR=${ALTIUM_SCHEMATIC_GRAPHIC_COLOR}`,
     ...(pathPrimitive.fill
-      ? [`AREACOLOR=${ALTIUM_SCHEMATIC_PRIMARY_COLOR}`, "ISSOLID=T"]
+      ? [`AREACOLOR=${ALTIUM_SCHEMATIC_GRAPHIC_COLOR}`, "ISSOLID=T"]
       : []),
   ]
 }
@@ -118,8 +119,8 @@ function createAltiumCircleRecordFields({
     `RADIUS=${altiumRadius}`,
     `SECONDARYRADIUS=${altiumRadius}`,
     "LINEWIDTH=1",
-    `COLOR=${ALTIUM_SCHEMATIC_PRIMARY_COLOR}`,
-    `AREACOLOR=${circlePrimitive.fill ? ALTIUM_SCHEMATIC_PRIMARY_COLOR : ALTIUM_SCHEMATIC_WHITE}`,
+    `COLOR=${ALTIUM_SCHEMATIC_GRAPHIC_COLOR}`,
+    `AREACOLOR=${circlePrimitive.fill ? ALTIUM_SCHEMATIC_GRAPHIC_COLOR : ALTIUM_SCHEMATIC_WHITE}`,
     `ISSOLID=${circlePrimitive.fill ? "T" : "F"}`,
   ]
 }
@@ -157,7 +158,7 @@ function createAltiumBoxRecordFields({
     `CORNER.X=${altiumSecondCorner.x}`,
     `CORNER.Y=${altiumSecondCorner.y}`,
     "LINEWIDTH=1",
-    `COLOR=${ALTIUM_SCHEMATIC_PRIMARY_COLOR}`,
+    `COLOR=${ALTIUM_SCHEMATIC_GRAPHIC_COLOR}`,
     `AREACOLOR=${ALTIUM_SCHEMATIC_WHITE}`,
     "ISSOLID=F",
   ]
