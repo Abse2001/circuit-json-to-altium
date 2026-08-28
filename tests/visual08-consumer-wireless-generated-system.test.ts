@@ -31,7 +31,6 @@ test("reproduces the Consumer Wireless Module generated system", async () => {
     "consumer-wireless-module-05.SchDoc",
     "consumer-wireless-module-06.SchDoc",
     "consumer-wireless-module-07.SchDoc",
-    "consumer-wireless-module-08.SchDoc",
   ])
 
   const parsedSchematics = schematics.map(({ content }) =>
@@ -57,13 +56,16 @@ test("reproduces the Consumer Wireless Module generated system", async () => {
     "sensors",
     "wireless_connectivity",
   ])
+  const exportedSourceSheets = sourceSheets.filter(
+    ({ name }) => name !== "system_diagram",
+  )
 
   const rootSchematic = parsedSchematics[0]
   if (!rootSchematic) throw new Error("Converter did not create a root sheet")
   expect(
     rootSchematic.sheetLinks.map(({ fileName, name }) => ({ fileName, name })),
   ).toEqual(
-    sourceSheets.map((sheet, index) => ({
+    exportedSourceSheets.map((sheet, index) => ({
       fileName: `consumer-wireless-module-${String(index + 1).padStart(2, "0")}.SchDoc`,
       name: String(Reflect.get(sheet, "display_name") ?? sheet.name),
     })),
@@ -71,7 +73,7 @@ test("reproduces the Consumer Wireless Module generated system", async () => {
 
   const snapshots = [serializeAltiumSheetToSvg(rootSchematic)]
   const snapshotNames = ["root-hierarchy"]
-  for (const [index, sourceSheet] of sourceSheets.entries()) {
+  for (const [index, sourceSheet] of exportedSourceSheets.entries()) {
     const generatedSchematic = parsedSchematics[index + 1]
     if (!generatedSchematic) {
       throw new Error(`Missing generated child sheet ${index + 1}`)
@@ -83,7 +85,7 @@ test("reproduces the Consumer Wireless Module generated system", async () => {
     const altiumSvg = serializeAltiumSheetToSvg(generatedSchematic)
     snapshots.push(createSideBySideSvg(circuitJsonSvg, altiumSvg))
     snapshotNames.push(
-      `${String(index + 1).padStart(2, "0")}-${String(sourceSheet.name).replaceAll("_", "-")}`,
+      `${String(Number(sourceSheet.sheet_index ?? index + 1) + 1).padStart(2, "0")}-${String(sourceSheet.name).replaceAll("_", "-")}`,
     )
   }
 

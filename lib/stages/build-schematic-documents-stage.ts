@@ -2,7 +2,8 @@ import { serializeAltiumSchDocToBinary } from "altiumts"
 import { ConverterStage } from "../converter-stage"
 import type { AltiumSchematicChildSheet } from "../create-altium-schematic-sheet-symbol-records"
 import { createSchematicDocument } from "../create-schematic-document"
-import { asNumber, asString, byType } from "../format"
+import { asNumber, asString } from "../format"
+import { getExportableSchematicSheets } from "../get-exportable-schematic-sheets"
 import type { AltiumSchematicFile, NormalizedCircuitJson } from "../types"
 
 export class BuildSchematicDocumentsStage extends ConverterStage<
@@ -10,7 +11,7 @@ export class BuildSchematicDocumentsStage extends ConverterStage<
   AltiumSchematicFile[]
 > {
   _step(): void {
-    const sheets = byType(this.input, "schematic_sheet").sort(
+    const sheets = getExportableSchematicSheets(this.input).sort(
       (leftSheet, rightSheet) =>
         asNumber(leftSheet.sheet_index) - asNumber(rightSheet.sheet_index),
     )

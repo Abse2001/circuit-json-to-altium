@@ -52,6 +52,8 @@ The returned ZIP archive contains:
 
 The converter validates its generated PCB and schematic documents before returning the archive. Invalid geometry is rejected with a descriptive error instead of producing a corrupt project.
 
+Child sheets that contain only an embedded `schematic_graphic` SVG are omitted because native SchDoc generation cannot preserve that asset yet. Ordinary empty sheets and sheets with editable schematic content remain in the project, avoiding blank hierarchy pages without discarding real circuit content.
+
 ## Supported content
 
 The current converter handles board outlines, components, pads, plated and non-plated holes, routed copper with vias, nets, PCB silkscreen, schematic components, custom component symbol graphics, component pins, intentionally unconnected source ports, off-sheet ports, labels, native power ports, junctions, traces, and free-standing schematic sheet text and graphics. It also preserves multiple schematic sheets and sanitizes Altium field and filename text.
