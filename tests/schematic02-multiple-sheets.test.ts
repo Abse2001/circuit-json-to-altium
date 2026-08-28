@@ -167,3 +167,51 @@ test("creates a root schematic with sorted child sheet links", async () => {
     import.meta.path,
   )
 })
+
+test("does not reserve sheet space for hierarchy metadata", async () => {
+  const elements: CircuitElement[] = [
+    board(),
+    {
+      type: "schematic_sheet",
+      schematic_sheet_id: "sheet-a",
+      sheet_index: 0,
+    },
+    {
+      type: "schematic_sheet",
+      schematic_sheet_id: "sheet-b",
+      sheet_index: 1,
+    },
+    {
+      type: "schematic_group",
+      schematic_group_id: "group-a",
+      source_group_id: "source-group-a",
+      center: { x: 0, y: 0 },
+      width: 0,
+      height: 0,
+      schematic_component_ids: [],
+    },
+  ]
+
+  const result = await extractArchive(elements, "metadata")
+  const rootSchematic = result.schematics.find(
+    (_, index) =>
+      result.schematicSources[index]?.filename === "metadata.SchDoc",
+  )
+  const sheetRecord = rootSchematic?.getRecordsByKind("31")[0]
+
+  expect({
+    childLocations: rootSchematic?.sheetLinks.map(({ symbol }) => ({
+      x: symbol.getNumber("LOCATION.X"),
+      y: symbol.getNumber("LOCATION.Y"),
+    })),
+    height: sheetRecord?.getNumber("CUSTOMY"),
+    width: sheetRecord?.getNumber("CUSTOMX"),
+  }).toEqual({
+    childLocations: [
+      { x: 60, y: 240 },
+      { x: 260, y: 240 },
+    ],
+    height: 300,
+    width: 480,
+  })
+})
