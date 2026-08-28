@@ -735,16 +735,10 @@ export function createSchematicDocument({
         altiumPinTextVisibilityFlags |
         altiumPinOrientation
       const explicitPinText = pinNameText ?? pinNumberText
-      const pinColorRecordFields = explicitPinText
-        ? [
-            `COLOR=${getAltiumColorFromCss({
-              cssColor: asString(explicitPinText.color),
-              fallbackAltiumColor: ALTIUM_SCHEMATIC_DEFAULT_COLOR,
-            })}`,
-          ]
-        : hasCustomSymbolPrimitives
-          ? [`COLOR=${ALTIUM_SCHEMATIC_GRAPHIC_COLOR}`]
-          : []
+      const pinColor = getAltiumColorFromCss({
+        cssColor: asString(explicitPinText?.color),
+        fallbackAltiumColor: ALTIUM_SCHEMATIC_GRAPHIC_COLOR,
+      })
       addSchematicRecord(
         [
           "RECORD=2",
@@ -762,7 +756,7 @@ export function createSchematicDocument({
           ...(schematicPort.is_drawn_with_inversion_circle === true
             ? [`SYMBOL_OUTEREDGE=${ALTIUM_PIN_INVERSION_SYMBOL}`]
             : []),
-          ...pinColorRecordFields,
+          `COLOR=${pinColor}`,
           "FONTID=2",
         ],
         schematicRecordContext,
