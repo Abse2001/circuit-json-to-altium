@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test"
 import { serializeAltiumSheetToSvg } from "altiumts"
+import type { CircuitJson } from "circuit-json"
+import { convertCircuitJsonToSchematicSvg } from "circuit-to-svg"
 import {
   board,
   type CircuitElement,
@@ -7,6 +9,7 @@ import {
   extractArchive,
   sourceComponent,
 } from "./fixtures"
+import { createSideBySideSvg } from "./fixtures/create-side-by-side-svg"
 
 test("creates a root schematic with sorted child sheet links", async () => {
   const elements: CircuitElement[] = [
@@ -73,6 +76,7 @@ test("creates a root schematic with sorted child sheet links", async () => {
       schematic_sheet_id: "sheet-a",
       source_component_id: "sc-a",
       center: { x: 0, y: 0 },
+      size: { width: 2, height: 1 },
     },
     {
       type: "schematic_component",
@@ -80,12 +84,14 @@ test("creates a root schematic with sorted child sheet links", async () => {
       schematic_sheet_id: "sheet-b",
       source_component_id: "sc-b",
       center: { x: 0, y: 0 },
+      size: { width: 2, height: 1 },
     },
     {
       type: "schematic_component",
       schematic_component_id: "sch-free",
       source_component_id: "sc-free",
       center: { x: 2, y: 0 },
+      size: { width: 2, height: 1 },
     },
   ]
 
@@ -161,7 +167,11 @@ test("creates a root schematic with sorted child sheet links", async () => {
     rootSchematic.components.map((component) => component.get("UNIQUEID")),
   ).toEqual(["sch-free"])
   for (const schematic of result.schematics) expectValidSchematic(schematic)
-  await expect(serializeAltiumSheetToSvg(rootSchematic)).toMatchSvgSnapshot(
-    import.meta.path,
+  const circuitJsonSvg = convertCircuitJsonToSchematicSvg(
+    elements as CircuitJson,
   )
+  const altiumSvg = serializeAltiumSheetToSvg(rootSchematic)
+  await expect(
+    createSideBySideSvg(circuitJsonSvg, altiumSvg),
+  ).toMatchSvgSnapshot(import.meta.path)
 })
