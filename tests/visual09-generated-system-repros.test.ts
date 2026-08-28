@@ -14,16 +14,21 @@ interface GeneratedSystemRepro {
   expectedSheetNames: string[]
 }
 
-const expectSchematicPinTextCentered = (svg: string) => {
+function expectPinNameAndDesignatorBaselines(svg: string): number {
   const schematicPinGroups = svg.match(/<g data-record="2">.*?<\/g>/g) ?? []
-  const pinTextBaselines = schematicPinGroups.flatMap((pinGroup) =>
+  const pinTextBaselinesByPin = schematicPinGroups.map((pinGroup) =>
     [...pinGroup.matchAll(/dominant-baseline="([^"]+)"/g)].map(
       (match) => match[1],
     ),
   )
-  expect(pinTextBaselines.every((baseline) => baseline === "central")).toBe(
-    true,
+  const pinsWithDesignatorAndName = pinTextBaselinesByPin.filter(
+    (pinTextBaselines) => pinTextBaselines.length === 2,
   )
+  for (const [designatorBaseline, nameBaseline] of pinsWithDesignatorAndName) {
+    expect(designatorBaseline).toBe("text-after-edge")
+    expect(nameBaseline).toBe("central")
+  }
+  return pinsWithDesignatorAndName.length
 }
 
 const repros: GeneratedSystemRepro[] = [
@@ -125,6 +130,7 @@ for (const repro of repros) {
 
     const snapshots = [serializeAltiumSheetToSvg(rootSchematic)]
     const snapshotNames = [`${repro.projectName}-root-hierarchy`]
+    let pinNameAndDesignatorPairCount = 0
     for (const [index, sourceSheet] of sourceSheets.entries()) {
       const generatedSchematic = parsedSchematics[index + 1]
       if (!generatedSchematic) {
@@ -135,12 +141,15 @@ for (const repro of repros) {
       })
       const generatedSchematicSvg =
         serializeAltiumSheetToSvg(generatedSchematic)
-      expectSchematicPinTextCentered(generatedSchematicSvg)
+      pinNameAndDesignatorPairCount += expectPinNameAndDesignatorBaselines(
+        generatedSchematicSvg,
+      )
       snapshots.push(createSideBySideSvg(circuitJsonSvg, generatedSchematicSvg))
       snapshotNames.push(
         `${repro.projectName}-${String(index + 1).padStart(2, "0")}-${String(sourceSheet.name).replaceAll("_", "-")}`,
       )
     }
+    expect(pinNameAndDesignatorPairCount).toBeGreaterThan(0)
 
     await expect(snapshots).toMatchMultipleSvgSnapshots(
       import.meta.path,
