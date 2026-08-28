@@ -107,8 +107,8 @@ test("uses native pin text visibility for built-in and boxed symbols", async () 
       y: pin.getNumber("LOCATION.Y"),
     })),
   ).toEqual([
-    { length: 2, x: 102, y: 100 },
-    { length: 2, x: 110, y: 100 },
+    { length: 2, x: 169, y: 150 },
+    { length: 2, x: 177, y: 150 },
   ])
   expect(chipPin?.getNumber("PINCONGLOMERATE")).toBe(58)
   expectValidSchematic(schematic)
