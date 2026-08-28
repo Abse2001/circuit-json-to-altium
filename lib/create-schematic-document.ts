@@ -847,6 +847,7 @@ export function createSchematicDocument({
     if (textPresentation) consumedSheetTexts.add(textPresentation)
     addSchematicRecord(
       createAltiumSchematicNetLabelRecordFields({
+        anchorSide: asString(schematicNetLabel.anchor_side),
         altiumLabelPosition:
           circuitToAltiumSchematicPoint(circuitLabelPosition),
         fontTable: altiumSchematicFontTable,
