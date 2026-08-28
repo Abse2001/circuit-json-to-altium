@@ -29,6 +29,16 @@ const elements: CircuitElement[] = [
     anchor: "bottom_right",
     color: "#0000ff",
   },
+  ...(["bottom", "left", "right", "top"] as const).map((anchor, index) => ({
+    type: "schematic_text" as const,
+    schematic_text_id: `short_anchor_${anchor}`,
+    text: `SHORT ${anchor.toUpperCase()}`,
+    font_size: 0.6,
+    position: { x: index * 2, y: 3 },
+    rotation: 0,
+    anchor,
+    color: "#ff0000",
+  })),
   {
     type: "schematic_rect",
     schematic_rect_id: "section_box",
@@ -105,6 +115,10 @@ test("writes schematic sheet annotations as native records", async () => {
   ).toEqual([
     { color: 0x00_00_ff, fontId: 4, justification: 6, text: "POWER SUPPLY" },
     { color: 0xff_00_00, fontId: 5, justification: 2, text: "3.3 V" },
+    { color: 0x00_00_ff, fontId: 4, justification: 1, text: "SHORT BOTTOM" },
+    { color: 0x00_00_ff, fontId: 4, justification: 3, text: "SHORT LEFT" },
+    { color: 0x00_00_ff, fontId: 4, justification: 5, text: "SHORT RIGHT" },
+    { color: 0x00_00_ff, fontId: 4, justification: 7, text: "SHORT TOP" },
   ])
   expect({
     areaColor: rectangle?.getNumber("AREACOLOR"),

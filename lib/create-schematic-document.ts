@@ -1,4 +1,5 @@
 import { getAltiumColorFromCss } from "./altium-color"
+import { ALTIUM_SCHEMATIC_GRAPHIC_COLOR } from "./altium-schematic-colors"
 import { createAltiumSchematicFontTable } from "./create-altium-schematic-font-table"
 import { createAltiumSchematicNetLabelRecordFields } from "./create-altium-schematic-net-label-record-fields"
 import { createAltiumSchematicNoConnectRecordFields } from "./create-altium-schematic-no-connect-record-fields"
@@ -154,20 +155,29 @@ function getSchematicSymbolPrimitives({
   const schematicComponentId = asString(
     schematicComponent.schematic_component_id,
   )
-  const schematicSymbolId = asString(schematicComponent.schematic_symbol_id)
-  const componentPrimitives = (
+  const declaredSchematicSymbolId = asString(
+    schematicComponent.schematic_symbol_id,
+  )
+  const allComponentPrimitives =
     maps.byComponentId.get(schematicComponentId) ?? []
-  ).filter((primitive) => {
+  const componentPrimitives = allComponentPrimitives.filter((primitive) => {
     const primitiveSymbolId = asString(primitive.schematic_symbol_id)
     return (
-      !schematicSymbolId ||
+      !declaredSchematicSymbolId ||
       !primitiveSymbolId ||
-      primitiveSymbolId === schematicSymbolId
+      primitiveSymbolId === declaredSchematicSymbolId
     )
   })
-  const symbolPrimitives = schematicSymbolId
-    ? (maps.bySymbolId.get(schematicSymbolId) ?? [])
-    : []
+  const associatedSchematicSymbolIds = new Set(
+    declaredSchematicSymbolId
+      ? [declaredSchematicSymbolId]
+      : allComponentPrimitives
+          .map((primitive) => asString(primitive.schematic_symbol_id))
+          .filter(Boolean),
+  )
+  const symbolPrimitives = [...associatedSchematicSymbolIds].flatMap(
+    (schematicSymbolId) => maps.bySymbolId.get(schematicSymbolId) ?? [],
+  )
   return [...new Set([...componentPrimitives, ...symbolPrimitives])]
 }
 
@@ -732,7 +742,9 @@ export function createSchematicDocument({
               fallbackAltiumColor: ALTIUM_SCHEMATIC_DEFAULT_COLOR,
             })}`,
           ]
-        : []
+        : hasCustomSymbolPrimitives
+          ? [`COLOR=${ALTIUM_SCHEMATIC_GRAPHIC_COLOR}`]
+          : []
       addSchematicRecord(
         [
           "RECORD=2",

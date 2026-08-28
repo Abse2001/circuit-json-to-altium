@@ -35,7 +35,6 @@ const elements: CircuitElement[] = [
     type: "schematic_component",
     schematic_component_id: schematicComponentId,
     source_component_id: "source_component_custom",
-    schematic_symbol_id: schematicSymbolId,
     center: { x: 5, y: 5 },
     size: { width: 8, height: 6 },
   },
@@ -180,6 +179,7 @@ test("writes custom symbol primitives as owned native Altium records", async () 
   )
   expect(designator?.getBoolean("ISHIDDEN")).toBe(true)
   expect(pin?.getNumber("PINCONGLOMERATE")).toBe(34)
+  expect(pin?.getNumber("COLOR")).toBe(132)
   expect(customTexts).toHaveLength(1)
   expectValidSchematic(schematic)
 })
