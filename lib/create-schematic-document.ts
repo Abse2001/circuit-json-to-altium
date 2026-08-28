@@ -91,6 +91,7 @@ const ALTIUM_PIN_DESIGNATOR_VISIBLE_FLAG = 0x10
 const ALTIUM_PIN_CLOCK_SYMBOL = 3
 const ALTIUM_PIN_INVERSION_SYMBOL = 1
 const ALTIUM_SCHEMATIC_DEFAULT_COLOR = 0x37_29_1f
+const ALTIUM_SCHEMATIC_FALLBACK_BODY_COLOR = 0xc2_ffff
 const ALTIUM_PIN_ORIENTATION_BY_FACING_DIRECTION: Record<string, number> = {
   left: 2,
   right: 0,
@@ -562,8 +563,8 @@ export function createSchematicDocument({
           `CORNER.Y=${fallbackSchematicBoxBounds.top}`,
           "LINEWIDTH=1",
           "COLOR=136",
-          "AREACOLOR=16777215",
-          "ISSOLID=F",
+          `AREACOLOR=${ALTIUM_SCHEMATIC_FALLBACK_BODY_COLOR}`,
+          "ISSOLID=T",
         ],
         schematicRecordContext,
       )
