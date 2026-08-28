@@ -14,6 +14,23 @@ interface GeneratedSystemRepro {
   expectedSheetNames: string[]
 }
 
+function expectPinNameAndDesignatorBaselines(svg: string): number {
+  const schematicPinGroups = svg.match(/<g data-record="2">.*?<\/g>/g) ?? []
+  const pinTextBaselinesByPin = schematicPinGroups.map((pinGroup) =>
+    [...pinGroup.matchAll(/dominant-baseline="([^"]+)"/g)].map(
+      (match) => match[1],
+    ),
+  )
+  const pinsWithDesignatorAndName = pinTextBaselinesByPin.filter(
+    (pinTextBaselines) => pinTextBaselines.length === 2,
+  )
+  for (const [designatorBaseline, nameBaseline] of pinsWithDesignatorAndName) {
+    expect(designatorBaseline).toBe("text-after-edge")
+    expect(nameBaseline).toBe("central")
+  }
+  return pinsWithDesignatorAndName.length
+}
+
 const repros: GeneratedSystemRepro[] = [
   {
     fixtureName: "generated-system-automotive-mirror.circuit.json",
@@ -113,6 +130,7 @@ for (const repro of repros) {
 
     const snapshots = [serializeAltiumSheetToSvg(rootSchematic)]
     const snapshotNames = [`${repro.projectName}-root-hierarchy`]
+    let pinNameAndDesignatorPairCount = 0
     for (const [index, sourceSheet] of sourceSheets.entries()) {
       const generatedSchematic = parsedSchematics[index + 1]
       if (!generatedSchematic) {
@@ -121,16 +139,17 @@ for (const repro of repros) {
       const circuitJsonSvg = convertCircuitJsonToSchematicSvg(circuitJson, {
         schematicSheetId: String(sourceSheet.schematic_sheet_id),
       })
-      snapshots.push(
-        createSideBySideSvg(
-          circuitJsonSvg,
-          serializeAltiumSheetToSvg(generatedSchematic),
-        ),
+      const generatedSchematicSvg =
+        serializeAltiumSheetToSvg(generatedSchematic)
+      pinNameAndDesignatorPairCount += expectPinNameAndDesignatorBaselines(
+        generatedSchematicSvg,
       )
+      snapshots.push(createSideBySideSvg(circuitJsonSvg, generatedSchematicSvg))
       snapshotNames.push(
         `${repro.projectName}-${String(index + 1).padStart(2, "0")}-${String(sourceSheet.name).replaceAll("_", "-")}`,
       )
     }
+    expect(pinNameAndDesignatorPairCount).toBeGreaterThan(0)
 
     await expect(snapshots).toMatchMultipleSvgSnapshots(
       import.meta.path,
