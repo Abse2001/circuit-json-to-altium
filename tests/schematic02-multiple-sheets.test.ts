@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { serializeAltiumSheetToSvg } from "altiumts"
-import type { CircuitJson } from "circuit-json"
+import { type CircuitJson, schematic_component } from "circuit-json"
 import { convertCircuitJsonToSchematicSvg } from "circuit-to-svg"
 import {
   board,
@@ -78,7 +78,6 @@ test("creates a root schematic with sorted child sheet links", async () => {
       schematic_sheet_id: "sheet-a",
       source_component_id: "sc-a",
       center: { x: 0, y: 0 },
-      size: { width: 2, height: 1 },
     },
     {
       type: "schematic_component",
@@ -86,14 +85,12 @@ test("creates a root schematic with sorted child sheet links", async () => {
       schematic_sheet_id: "sheet-b",
       source_component_id: "sc-b",
       center: { x: 0, y: 0 },
-      size: { width: 2, height: 1 },
     },
     {
       type: "schematic_component",
       schematic_component_id: "sch-free",
       source_component_id: "sc-free",
       center: { x: 2, y: 0 },
-      size: { width: 2, height: 1 },
     },
   ]
 
@@ -170,7 +167,11 @@ test("creates a root schematic with sorted child sheet links", async () => {
   ).toEqual(["sch-free"])
   for (const schematic of result.schematics) expectValidSchematic(schematic)
   const circuitJsonSvg = convertCircuitJsonToSchematicSvg(
-    elements as CircuitJson,
+    elements.filter(
+      (element) =>
+        element.type !== "schematic_component" ||
+        schematic_component.safeParse(element).success,
+    ) as CircuitJson,
   )
   const altiumSvg = serializeAltiumSheetToSvg(rootSchematic)
   await expect(
