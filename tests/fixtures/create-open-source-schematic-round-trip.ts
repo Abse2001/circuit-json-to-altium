@@ -33,7 +33,6 @@ type OpenSourceSchematicRoundTripOptions = {
 const ALTIUM_SCHEMATIC_PORT_FALLBACK_FONT_SIZE_POINTS = 8
 const ALTIUM_SCHEMATIC_DEFAULT_PAPER_WIDTH = 1000
 const ALTIUM_SCHEMATIC_DEFAULT_PAPER_HEIGHT = 800
-const ALTIUM_SCHEMATIC_DEFAULT_MARGIN_RATIO = 0.035
 
 function getReferencePaperComparisonViewBox(
   document: AltiumSchDoc,
@@ -47,14 +46,11 @@ function getReferencePaperComparisonViewBox(
     sheetRecord?.getNumber("CUSTOMY") ?? ALTIUM_SCHEMATIC_DEFAULT_PAPER_HEIGHT,
     1,
   )
-  const margin =
-    Math.max(paperWidth, paperHeight) * ALTIUM_SCHEMATIC_DEFAULT_MARGIN_RATIO
-
   return {
-    x: -margin,
-    y: -margin,
-    width: paperWidth + margin * 2,
-    height: paperHeight + margin * 2,
+    x: 0,
+    y: 0,
+    width: paperWidth,
+    height: paperHeight,
   }
 }
 
