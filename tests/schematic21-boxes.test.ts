@@ -1,11 +1,14 @@
 import { expect, test } from "bun:test"
-import type { AltiumSchDoc } from "altiumts"
+import { type AltiumSchDoc, serializeAltiumSheetToSvg } from "altiumts"
+import type { CircuitJson } from "circuit-json"
+import { convertCircuitJsonToSchematicSvg } from "circuit-to-svg"
 import {
   board,
   type CircuitElement,
   expectValidSchematic,
   extractArchive,
 } from "./fixtures"
+import { createSideBySideSvg } from "./fixtures/create-side-by-side-svg"
 
 test("writes standalone schematic boxes as native Altium graphics", async () => {
   const elements: CircuitElement[] = [
@@ -58,4 +61,12 @@ test("writes standalone schematic boxes as native Altium graphics", async () => 
     startsAndEndsAtSameY: true,
   })
   expectValidSchematic(schematic)
+
+  const sourceSvg = await convertCircuitJsonToSchematicSvg(
+    elements as CircuitJson,
+  )
+  const altiumSvg = serializeAltiumSheetToSvg(schematic)
+  await expect(createSideBySideSvg(sourceSvg, altiumSvg)).toMatchSvgSnapshot(
+    import.meta.path,
+  )
 })
