@@ -101,6 +101,65 @@ function createRectRecordFields({
   ]
 }
 
+function createBoxRecordFields({
+  annotation,
+  circuitToAltiumSchematicPoint,
+}: CreateAltiumSchematicSheetAnnotationRecordFieldsInput):
+  | string[]
+  | undefined {
+  const circuitCenter = asPoint({ x: annotation.x, y: annotation.y })
+  const widthCircuitUnits = asNumber(annotation.width)
+  const heightCircuitUnits = asNumber(annotation.height)
+  if (!circuitCenter || widthCircuitUnits <= 0 || heightCircuitUnits <= 0) {
+    return undefined
+  }
+  const circuitCorners = [
+    {
+      x: circuitCenter.x - widthCircuitUnits / 2,
+      y: circuitCenter.y - heightCircuitUnits / 2,
+    },
+    {
+      x: circuitCenter.x + widthCircuitUnits / 2,
+      y: circuitCenter.y + heightCircuitUnits / 2,
+    },
+  ]
+  const firstCorner = circuitToAltiumSchematicPoint(circuitCorners[0]!)
+  const secondCorner = circuitToAltiumSchematicPoint(circuitCorners[1]!)
+
+  if (annotation.is_dashed === true) {
+    const altiumPoints = [
+      firstCorner,
+      { x: secondCorner.x, y: firstCorner.y },
+      secondCorner,
+      { x: firstCorner.x, y: secondCorner.y },
+      firstCorner,
+    ]
+    return [
+      "RECORD=6",
+      "LINEWIDTH=0",
+      "LINESTYLE=1",
+      `LOCATIONCOUNT=${altiumPoints.length}`,
+      ...altiumPoints.flatMap((point, pointIndex) => [
+        `X${pointIndex + 1}=${point.x}`,
+        `Y${pointIndex + 1}=${point.y}`,
+      ]),
+      `COLOR=${ALTIUM_SCHEMATIC_DEFAULT_COLOR}`,
+    ]
+  }
+
+  return [
+    "RECORD=14",
+    `LOCATION.X=${firstCorner.x}`,
+    `LOCATION.Y=${firstCorner.y}`,
+    `CORNER.X=${secondCorner.x}`,
+    `CORNER.Y=${secondCorner.y}`,
+    "LINEWIDTH=0",
+    `COLOR=${ALTIUM_SCHEMATIC_DEFAULT_COLOR}`,
+    `AREACOLOR=${ALTIUM_SCHEMATIC_DEFAULT_FILL_COLOR}`,
+    "ISSOLID=F",
+  ]
+}
+
 function createPathRecordFields({
   annotation,
   circuitToAltiumSchematicPoint,
@@ -138,6 +197,9 @@ export function createAltiumSchematicSheetAnnotationRecordFields(
   input: CreateAltiumSchematicSheetAnnotationRecordFieldsInput,
 ): string[] | undefined {
   if (!isSchematicSheetAnnotation(input.annotation)) return undefined
+  if (input.annotation.type === "schematic_box") {
+    return createBoxRecordFields(input)
+  }
   if (input.annotation.type === "schematic_text") {
     return createTextRecordFields(input)
   }
