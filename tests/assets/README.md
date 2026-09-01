@@ -1,16 +1,17 @@
 # Real-circuit fixtures
 
-`ti-sn74lvc1g34-buffer-truth-table.circuit.json` is the complete Circuit JSON
-export of the `SN74LVC1G34` buffer reference from `tscircuit/ti`. The exported
-schematic keeps the real TI component and signal connections, with the buffer's
-two-state truth table added in clear space to the right of the circuit.
+`ti-tpd2e009-esd-signal-map.circuit.json` is the complete Circuit JSON export of
+the `TPD2E009` differential-line ESD protection reference from `tscircuit/ti`.
+The exported schematic keeps the real TI component and SATA signal connections,
+with a signal-to-protected-pin table added in clear space to the right.
 
 The table uses an explicit `top_left` anchor, 0.1-unit cell padding, and six
 cells. Its title sits above the table rather than inside the grid, and neither
-the table nor its title intersects the buffer, wires, or net labels.
+the table nor its title intersects the rectangular component box, wires, or net
+labels.
 
-- Source: `tscircuit/ti/lib/subcircuits/LogicBuffer_SN74LVC1G34.circuit.tsx`
+- Source: `tscircuit/ti/lib/subcircuits/InputOutputProtection_TPD2E009_TIDA00399.circuit.tsx`
 - Revision: `dd9cb0a80904b1199edcdf8216ba027f2d1c1be8`
-- Repro addition: the SN74LVC1G34 input/output truth table and title
+- Repro addition: the SATA signal-to-protected-pin table and title
 - Generator: `tsci export --format circuit-json --disable-parts-engine`
-- SHA-256: `5ecbd5995af96ba1b32ffd049b275b79a4a4c717181bd7fe76e377a9e0b86e6e`
+- SHA-256: `295304c2e19a702fb871851a0c538c68756ae0f8754df24b68d3b8172b15df56`

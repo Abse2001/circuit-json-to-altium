@@ -12,7 +12,7 @@ import { createSideBySideSvg } from "./fixtures/create-side-by-side-svg"
 import { cropSvgViewBox } from "./fixtures/crop-svg-view-box"
 
 const fixtureUrl = new URL(
-  "./assets/ti-sn74lvc1g34-buffer-truth-table.circuit.json",
+  "./assets/ti-tpd2e009-esd-signal-map.circuit.json",
   import.meta.url,
 )
 
@@ -25,7 +25,7 @@ function addCanvasBackground(svg: string): string {
   )
 }
 
-test("reproduces the missing truth table on the TI SN74LVC1G34 buffer", async () => {
+test("reproduces the missing signal map on the TI TPD2E009 protection circuit", async () => {
   const circuitJson = JSON.parse(
     await readFile(fixtureUrl, "utf8"),
   ) as CircuitJson
@@ -41,7 +41,7 @@ test("reproduces the missing truth table on the TI SN74LVC1G34 buffer", async ()
   const sourceRectangles = circuitJson.filter(
     (element) => element.type === "schematic_rect",
   )
-  expect(sourceComponent?.manufacturer_part_number).toBe("SN74LVC1G34DBVR")
+  expect(sourceComponent?.manufacturer_part_number).toBe("TPD2E009DRTR")
   expect(tables).toHaveLength(1)
   expect(tables[0]?.anchor).toBe("top_left")
   expect(tables[0]?.cell_padding).toBe(0.1)
