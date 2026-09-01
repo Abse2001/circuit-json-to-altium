@@ -1,12 +1,16 @@
 # Real-circuit fixtures
 
-`sparkfun-mini-spectral-uv-sensor-as7331-qwiic.circuit.json` is the complete
-Circuit JSON export of the open-source SparkFun Mini Spectral UV Sensor AS7331
-Qwiic board. Its schematic contains a correctly positioned address-selection
-table with 15 cells and explicit cell padding.
+`ti-sn74lvc1g34-buffer-truth-table.circuit.json` is the complete Circuit JSON
+export of the `SN74LVC1G34` buffer reference from `tscircuit/ti`. The exported
+schematic keeps the real TI component and signal connections, with the buffer's
+two-state truth table added in clear space to the right of the circuit.
 
-- Source: `tscircuit/sparkfun-boards/boards/SparkFun-Mini-Spectral-UV-Sensor-AS7331-(Qwiic)/SparkFun-Mini-Spectral-UV-Sensor-AS7331-Qwiic.circuit.tsx`
-- Revision: `a92e35d0e381f85aa7964a36aef2359b507f5da5`
-- License: MIT
+The table uses an explicit `top_left` anchor, 0.1-unit cell padding, and six
+cells. Its title sits above the table rather than inside the grid, and neither
+the table nor its title intersects the buffer, wires, or net labels.
+
+- Source: `tscircuit/ti/lib/subcircuits/LogicBuffer_SN74LVC1G34.circuit.tsx`
+- Revision: `dd9cb0a80904b1199edcdf8216ba027f2d1c1be8`
+- Repro addition: the SN74LVC1G34 input/output truth table and title
 - Generator: `tsci export --format circuit-json --disable-parts-engine`
-- SHA-256: `bc694e88a99e60b29f6817062aff4c533baa8b6697f83b5963c13c9f643fd0a8`
+- SHA-256: `5ecbd5995af96ba1b32ffd049b275b79a4a4c717181bd7fe76e377a9e0b86e6e`
