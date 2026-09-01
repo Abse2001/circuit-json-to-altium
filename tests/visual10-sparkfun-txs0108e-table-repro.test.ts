@@ -88,7 +88,7 @@ test("reproduces the missing table on the full SparkFun TXS0108E board", async (
     height: 700,
     margin: 20,
     showBorder: false,
-    width: 1400,
+    width: 700,
   })
   await expect(
     addCanvasBackground(createSideBySideSvg(sourceSvg, altiumSvg)),
