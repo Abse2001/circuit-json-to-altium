@@ -9,10 +9,9 @@ import {
   extractArchive,
 } from "./fixtures"
 import { createSideBySideSvg } from "./fixtures/create-side-by-side-svg"
-import { cropSvgViewBox } from "./fixtures/crop-svg-view-box"
 
 const fixtureUrl = new URL(
-  "./assets/ti-tpd2e009-esd-signal-map.circuit.json",
+  "./assets/sparkfun-level-shifter-8-channel-txs0108e.circuit.json",
   import.meta.url,
 )
 
@@ -25,12 +24,18 @@ function addCanvasBackground(svg: string): string {
   )
 }
 
-test("reproduces the missing signal map on the TI TPD2E009 protection circuit", async () => {
+test("reproduces the missing table on the full SparkFun TXS0108E board", async () => {
   const circuitJson = JSON.parse(
     await readFile(fixtureUrl, "utf8"),
   ) as CircuitJson
-  const sourceComponent = circuitJson.find(
+  const sourceBoards = circuitJson.filter(
+    (element) => element.type === "source_board",
+  )
+  const sourceComponents = circuitJson.filter(
     (element) => element.type === "source_component",
+  )
+  const pcbComponents = circuitJson.filter(
+    (element) => element.type === "pcb_component",
   )
   const tables = circuitJson.filter(
     (element) => element.type === "schematic_table",
@@ -41,11 +46,26 @@ test("reproduces the missing signal map on the TI TPD2E009 protection circuit", 
   const sourceRectangles = circuitJson.filter(
     (element) => element.type === "schematic_rect",
   )
-  expect(sourceComponent?.manufacturer_part_number).toBe("TPD2E009DRTR")
+
+  expect(sourceBoards).toHaveLength(1)
+  expect(sourceComponents).toHaveLength(8)
+  expect(pcbComponents).toHaveLength(8)
+  expect(
+    sourceComponents.some(
+      (component) => component.manufacturer_part_number === "TXS0108EQWRKSRQ1",
+    ),
+  ).toBe(true)
   expect(tables).toHaveLength(1)
-  expect(tables[0]?.anchor).toBe("top_left")
-  expect(tables[0]?.cell_padding).toBe(0.1)
-  expect(tableCells).toHaveLength(6)
+  expect(tables[0]?.column_widths).toEqual([2.5, 2.5])
+  expect(tables[0]?.row_heights).toEqual([0.6, 0.6, 0.6, 0.6])
+  expect(tableCells.map((cell) => cell.text)).toEqual([
+    "Must have VCCA <= VCCB",
+    "VCCA Range:",
+    "VCCB Range:",
+    "1.4V to 3.6V",
+    "1.65V to 5.5V",
+    "OE voltage is referenced to VCCA",
+  ])
 
   const { schematics } = await extractArchive(circuitJson as CircuitElement[])
   const schematic = schematics[0] as AltiumSchDoc
@@ -54,30 +74,22 @@ test("reproduces the missing signal map on the TI TPD2E009 protection circuit", 
   const rootRectangles = schematic
     .getRecordsByKind("14")
     .filter((record) => schematic.getParent(record) === undefined)
+  const rootLabels = schematic
+    .getRecordsByKind("4")
+    .filter((record) => schematic.getParent(record) === undefined)
   expect(rootRectangles).toHaveLength(sourceRectangles.length)
-
-  const tableElements = [...tables, ...tableCells]
-  const { schematics: tableSchematics } = await extractArchive(
-    tableElements as CircuitElement[],
-  )
-  const tableSchematic = tableSchematics[0] as AltiumSchDoc
   expect(
-    tableSchematic
-      .getRecordsByKind("14")
-      .filter((record) => tableSchematic.getParent(record) === undefined),
-  ).toHaveLength(0)
+    rootLabels.some((record) => record.getDecoded("TEXT") === "VCCA Range:"),
+  ).toBe(false)
 
   const sourceSvg = await convertCircuitJsonToSchematicSvg(circuitJson)
-  const altiumSvg = cropSvgViewBox(
-    serializeAltiumSheetToSvg(schematic, {
-      backgroundColor: "rgb(245, 241, 237)",
-      height: 600,
-      margin: 0,
-      showBorder: false,
-      width: 1200,
-    }),
-    { x: 85, y: 100, width: 240, height: 120 },
-  )
+  const altiumSvg = serializeAltiumSheetToSvg(schematic, {
+    backgroundColor: "rgb(245, 241, 237)",
+    height: 700,
+    margin: 20,
+    showBorder: false,
+    width: 1400,
+  })
   await expect(
     addCanvasBackground(createSideBySideSvg(sourceSvg, altiumSvg)),
   ).toMatchSvgSnapshot(import.meta.path)

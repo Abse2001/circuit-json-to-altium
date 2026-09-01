@@ -1,17 +1,14 @@
 # Real-circuit fixtures
 
-`ti-tpd2e009-esd-signal-map.circuit.json` is the complete Circuit JSON export of
-the `TPD2E009` differential-line ESD protection reference from `tscircuit/ti`.
-The exported schematic keeps the real TI component and SATA signal connections,
-with a signal-to-protected-pin table added in clear space to the right.
+`sparkfun-level-shifter-8-channel-txs0108e.circuit.json` is the complete Circuit
+JSON export of the existing SparkFun TXS0108E 8-channel level-shifter board. The
+real board already includes a four-row voltage-range table above the boxed
+TXS0108E component, alongside its headers, bypass capacitors, wiring, PCB, and
+source data. The fixture is not reduced to the table and does not add synthetic
+content.
 
-The table uses an explicit `top_left` anchor, 0.1-unit cell padding, and six
-cells. Its title sits above the table rather than inside the grid, and neither
-the table nor its title intersects the rectangular component box, wires, or net
-labels.
-
-- Source: `tscircuit/ti/lib/subcircuits/InputOutputProtection_TPD2E009_TIDA00399.circuit.tsx`
-- Revision: `dd9cb0a80904b1199edcdf8216ba027f2d1c1be8`
-- Repro addition: the SATA signal-to-protected-pin table and title
+- Source: `tscircuit/sparkfun-boards/boards/SparkFun-Level-Shifter-8-Channel-TXS0108E/SparkFun-Level-Shifter-8-Channel-TXS0108E.circuit.tsx`
+- Revision: `a92e35d0e381f85aa7964a36aef2359b507f5da5`
+- License: MIT
 - Generator: `tsci export --format circuit-json --disable-parts-engine`
-- SHA-256: `295304c2e19a702fb871851a0c538c68756ae0f8754df24b68d3b8172b15df56`
+- SHA-256: `ece05d1c7e98ceccdf55dc6944a2d4f19e629ce69999e898ee4bbb246f2b5c95`
