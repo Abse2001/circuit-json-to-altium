@@ -8,7 +8,6 @@ import {
   expectValidSchematic,
   extractArchive,
 } from "./fixtures"
-import { createSideBySideSvg } from "./fixtures/create-side-by-side-svg"
 import { cropSvgViewBox } from "./fixtures/crop-svg-view-box"
 
 const fixtureUrl = new URL(
@@ -51,6 +50,34 @@ function cropSourceTable(sourceSvg: string): string {
   })
 }
 
+function createPositionAndDetailComparison({
+  detailAltiumSvg,
+  detailSourceSvg,
+  fullAltiumSvg,
+  fullSourceSvg,
+}: {
+  detailAltiumSvg: string
+  detailSourceSvg: string
+  fullAltiumSvg: string
+  fullSourceSvg: string
+}): string {
+  const toDataUrl = (svg: string) =>
+    `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`
+  const sourceSize = fullSourceSvg.match(
+    /<svg\b[^>]*\bwidth="([\d.]+)"[^>]*\bheight="([\d.]+)"/u,
+  )
+  if (!sourceSize) throw new Error("Expected a numeric source SVG size")
+  const width = Number(sourceSize[1])
+  const height = Number(sourceSize[2])
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width * 2}" height="${height * 2}" viewBox="0 0 ${width * 2} ${height * 2}">
+  <rect width="100%" height="100%" fill="rgb(245, 241, 237)"/>
+  <image x="0" y="0" width="${width}" height="${height}" href="${toDataUrl(fullSourceSvg)}"/>
+  <image x="${width}" y="0" width="${width}" height="${height}" href="${toDataUrl(fullAltiumSvg)}"/>
+  <image x="0" y="${height}" width="${width}" height="${height}" href="${toDataUrl(detailSourceSvg)}"/>
+  <image x="${width}" y="${height}" width="${width}" height="${height}" href="${toDataUrl(detailAltiumSvg)}"/>
+</svg>`
+}
+
 test("reproduces missing tables on the open-source SparkFun AS7331 schematic", async () => {
   const circuitJson = JSON.parse(
     await readFile(fixtureUrl, "utf8"),
@@ -88,17 +115,30 @@ test("reproduces missing tables on the open-source SparkFun AS7331 schematic", a
       .filter((record) => tableSchematic.getParent(record) === undefined),
   ).toHaveLength(0)
 
-  const sourceSvg = cropSourceTable(
-    await convertCircuitJsonToSchematicSvg(tableElements as CircuitJson),
-  )
-  const altiumSvg = serializeAltiumSheetToSvg(tableSchematic, {
+  const fullSourceSvg = await convertCircuitJsonToSchematicSvg(circuitJson)
+  const fullAltiumSvg = serializeAltiumSheetToSvg(schematic, {
     backgroundColor: "rgb(245, 241, 237)",
     height: 600,
     margin: 0,
     showBorder: false,
     width: 1200,
   })
-  await expect(createSideBySideSvg(sourceSvg, altiumSvg)).toMatchSvgSnapshot(
-    import.meta.path,
+  const detailSourceSvg = cropSourceTable(
+    await convertCircuitJsonToSchematicSvg(tableElements as CircuitJson),
   )
+  const detailAltiumSvg = serializeAltiumSheetToSvg(tableSchematic, {
+    backgroundColor: "rgb(245, 241, 237)",
+    height: 600,
+    margin: 0,
+    showBorder: false,
+    width: 1200,
+  })
+  await expect(
+    createPositionAndDetailComparison({
+      detailAltiumSvg,
+      detailSourceSvg,
+      fullAltiumSvg,
+      fullSourceSvg,
+    }),
+  ).toMatchSvgSnapshot(import.meta.path)
 })
