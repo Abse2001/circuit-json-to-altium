@@ -260,10 +260,23 @@ export function createSchematicDocument({
   includeAllSchematicElements,
   schematicSheetId,
 }: CreateSchematicDocumentParams): string {
+  const sourcePorts = new Map<SourcePortId, CircuitElement>(
+    byType(circuitJson, "source_port").map((sourcePort) => [
+      asString(sourcePort.source_port_id),
+      sourcePort,
+    ]),
+  )
   const schematicElements = circuitJson.filter(
     (element) =>
       element.type?.startsWith("schematic_") === true &&
       element.type !== "schematic_sheet" &&
+      !(
+        element.type === "schematic_port" &&
+        !asString(element.schematic_component_id) &&
+        element.is_connected === false &&
+        sourcePorts.get(asString(element.source_port_id))?.do_not_connect !==
+          true
+      ) &&
       doesElementBelongToSchematicSheet({
         element,
         includeAllSchematicElements,
@@ -418,12 +431,6 @@ export function createSchematicDocument({
     byType(circuitJson, "source_component")
       .filter((element) => typeof element.source_component_id === "string")
       .map((element) => [asString(element.source_component_id), element]),
-  )
-  const sourcePorts = new Map<SourcePortId, CircuitElement>(
-    byType(circuitJson, "source_port").map((sourcePort) => [
-      asString(sourcePort.source_port_id),
-      sourcePort,
-    ]),
   )
   const schematicSymbols = new Map<SchematicSymbolId, CircuitElement>(
     byType(circuitJson, "schematic_symbol").map((schematicSymbol) => [
