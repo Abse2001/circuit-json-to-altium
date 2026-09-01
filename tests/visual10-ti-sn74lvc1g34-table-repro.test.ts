@@ -9,6 +9,7 @@ import {
   extractArchive,
 } from "./fixtures"
 import { createSideBySideSvg } from "./fixtures/create-side-by-side-svg"
+import { cropSvgViewBox } from "./fixtures/crop-svg-view-box"
 
 const fixtureUrl = new URL(
   "./assets/ti-sn74lvc1g34-buffer-truth-table.circuit.json",
@@ -67,13 +68,16 @@ test("reproduces the missing truth table on the TI SN74LVC1G34 buffer", async ()
   ).toHaveLength(0)
 
   const sourceSvg = await convertCircuitJsonToSchematicSvg(circuitJson)
-  const altiumSvg = serializeAltiumSheetToSvg(schematic, {
-    backgroundColor: "rgb(245, 241, 237)",
-    height: 600,
-    margin: 0,
-    showBorder: false,
-    width: 1200,
-  })
+  const altiumSvg = cropSvgViewBox(
+    serializeAltiumSheetToSvg(schematic, {
+      backgroundColor: "rgb(245, 241, 237)",
+      height: 600,
+      margin: 0,
+      showBorder: false,
+      width: 1200,
+    }),
+    { x: 85, y: 100, width: 240, height: 120 },
+  )
   await expect(
     addCanvasBackground(createSideBySideSvg(sourceSvg, altiumSvg)),
   ).toMatchSvgSnapshot(import.meta.path)
