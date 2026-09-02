@@ -2,6 +2,38 @@ import { expect, test } from "bun:test"
 import { createOpenSourceSchematicRoundTrip } from "./fixtures/create-open-source-schematic-round-trip"
 import { createSideBySideSvg } from "./fixtures/create-side-by-side-svg"
 
+const pinTypes = [
+  "input",
+  "output",
+  "bidirectional",
+  "open_collector",
+  "power",
+  "passive",
+] as const
+
+function createPinElectricalSummarySvg({
+  roundTrip,
+  source,
+}: {
+  roundTrip: Array<{ type: string }>
+  source: Array<{ type: string }>
+}): string {
+  const count = (signatures: Array<{ type: string }>, type: string) =>
+    signatures.filter((signature) => signature.type === type).length
+  const rows = pinTypes
+    .map(
+      (type, index) =>
+        `<text x="20" y="${70 + index * 24}" font-family="Arial" font-size="16">${type}: source ${count(source, type)}, round trip ${count(roundTrip, type)}</text>`,
+    )
+    .join("")
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="520" height="240" viewBox="0 0 520 240">
+  <rect width="520" height="240" fill="rgb(245, 241, 237)"/>
+  <text x="20" y="30" font-family="Arial" font-size="18" font-weight="bold">Full HERON systems schematic</text>
+  <text x="20" y="52" font-family="Arial" font-size="15">Native pin electrical types</text>
+  ${rows}
+</svg>`
+}
+
 test("round-trips the open-source HERON systems PCB Altium schematic", async () => {
   const result = await createOpenSourceSchematicRoundTrip({
     filename: "heron-systems-pcb.SchDoc",
@@ -15,6 +47,29 @@ test("round-trips the open-source HERON systems PCB Altium schematic", async () 
 
   expect(result.roundTripCounts).toEqual(result.sourceCounts)
   expect(result.roundTripComponentNames).toEqual(result.sourceComponentNames)
+  expect(result.roundTripPinElectricalSignatures).not.toEqual(
+    result.sourcePinElectricalSignatures,
+  )
+  expect(
+    result.sourcePinElectricalSignatures.filter(
+      (signature) => signature.type === "output",
+    ),
+  ).toHaveLength(6)
+  expect(
+    result.sourcePinElectricalSignatures.filter(
+      (signature) => signature.type === "power",
+    ),
+  ).toHaveLength(2)
+  expect(
+    result.roundTripPinElectricalSignatures.filter(
+      (signature) => signature.type === "output",
+    ),
+  ).toHaveLength(0)
+  expect(
+    result.roundTripPinElectricalSignatures.filter(
+      (signature) => signature.type === "power",
+    ),
+  ).toHaveLength(0)
   expect(result.roundTripSymbolPrimitiveCounts).toEqual(
     result.sourceSymbolPrimitiveCounts,
   )
@@ -64,6 +119,12 @@ test("round-trips the open-source HERON systems PCB Altium schematic", async () 
   }).toEqual({ path: 0, rect: 9, text: 420 })
   expect(result.sourceSupportedPrimitiveTotal).toBeGreaterThan(300)
   await expect(
-    createSideBySideSvg(result.sourceSvg, result.roundTripSvg),
+    createSideBySideSvg(
+      createSideBySideSvg(result.sourceSvg, result.roundTripSvg),
+      createPinElectricalSummarySvg({
+        roundTrip: result.roundTripPinElectricalSignatures,
+        source: result.sourcePinElectricalSignatures,
+      }),
+    ),
   ).toMatchSvgSnapshot(import.meta.path)
 })
